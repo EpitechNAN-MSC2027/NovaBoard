@@ -1,1 +1,1 @@
-# Nova-Board
+# NovaBoard
