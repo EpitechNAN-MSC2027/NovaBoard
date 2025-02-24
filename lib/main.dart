@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/trello_auth.dart';
+import 'screens/login.dart';
+import 'screens/navigation.dart';
 
 void main() async {
   await dotenv.load();
@@ -8,12 +10,24 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: AuthPage(),
+      title: 'NovaBoard',
+      theme: ThemeData(
+        primarySwatch: Colors.deepPurple,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/navigation': (context) => const NavigationScreen(),
+      },
+      debugShowCheckedModeBanner: false,
+      
+      // home: AuthPage(),
     );
   }
 }
