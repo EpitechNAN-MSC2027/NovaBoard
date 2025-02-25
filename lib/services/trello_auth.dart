@@ -24,24 +24,26 @@ class TrelloAuthService {
           'https://trello.com/1/OAuthAuthorizeToken?oauth_token=$oauthToken&name=NovaBoard&scope=read,write&expiration=never';
 
       final result = await FlutterWebAuth.authenticate(
-          url: authorizationUrl,
-          callbackUrlScheme: callbackUrlScheme,
+        url: authorizationUrl,
+        callbackUrlScheme: callbackUrlScheme,
+        preferEphemeral: true,
       );
-
-      print("Callback result: $result");
 
       final uri = Uri.parse(result);
       final oauthVerifier = uri.queryParameters['oauth_verifier'];
 
-      print("OAuth Token before exchanging for access token: $oauthToken");
+      if (oauthVerifier == null) {
+        throw Exception('Missing oauth_verifier in callback');
+      }
 
       final accessToken = await _getAccessToken(oauthToken, oauthVerifier);
-
       await storage.write(key: 'trello_access_token', value: accessToken);
-
       print('Access Token Stored: $accessToken');
+
+      return;
     } catch (e) {
       print('Authentication Error: $e');
+      rethrow;
     }
   }
 
