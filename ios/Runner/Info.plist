@@ -45,5 +45,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>novaboard</string>
+            </array>
+        </dict>
+    </array>
+    <key>NSFaceIDUsageDescription</key>
+    <string>We use Face ID to secure your account.</string>
 </dict>
 </plist>
