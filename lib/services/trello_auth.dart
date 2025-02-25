@@ -29,8 +29,6 @@ class TrelloAuthService {
         preferEphemeral: true,
       );
 
-      print("Callback result: $result");
-
       final uri = Uri.parse(result);
       final oauthVerifier = uri.queryParameters['oauth_verifier'];
 
@@ -38,15 +36,14 @@ class TrelloAuthService {
         throw Exception('Missing oauth_verifier in callback');
       }
 
-      print("OAuth Token before exchanging for access token: $oauthToken");
-
       final accessToken = await _getAccessToken(oauthToken, oauthVerifier);
-
       await storage.write(key: 'trello_access_token', value: accessToken);
-
       print('Access Token Stored: $accessToken');
+
+      return;
     } catch (e) {
       print('Authentication Error: $e');
+      rethrow;
     }
   }
 

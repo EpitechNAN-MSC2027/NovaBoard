@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
-import 'trello_sign_up_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -32,19 +31,46 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSignIn(BuildContext context) async {
-    await _checkBiometricAuth(); // Try biometric auth first
+    try {
+      await _checkBiometricAuth(); // Try biometric auth first
 
-    String? storedToken = await _authService.getStoredAccessToken();
-    if (storedToken == null) {
-      await _authService.authenticateWithTrello();
-      storedToken = await _authService.getStoredAccessToken();
-    }
+      String? storedToken = await _authService.getStoredAccessToken();
+      if (storedToken == null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(child: CircularProgressIndicator());
+          },
+        );
 
-    if (storedToken != null && mounted) {
-      print("Authentication successful. Redirecting...");
-      Navigator.pushReplacementNamed(context, '/navigation');
-    } else {
-      print("Authentication Failed.");
+        await _authService.authenticateWithTrello();
+
+        if (mounted) Navigator.of(context).pop();
+
+        storedToken = await _authService.getStoredAccessToken();
+      }
+
+      if (storedToken != null && mounted) {
+        print("Authentication successful. Redirecting...");
+        Navigator.pushReplacementNamed(context, '/navigation');
+      } else {
+        print("Authentication Failed.");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Authentication failed. Please try again.')),
+          );
+        }
+      }
+    } catch (e) {
+      print("Authentication Error: $e");
+      if (mounted) {
+        Navigator.of(context).pop(false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Authentication error: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -76,18 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
               'Sign In',
               'lib/assets/LogoTrello.png',
               () => _handleSignIn(context),
-            ),
-            const SizedBox(height: 20),
-            _buildButton(
-              context,
-              'Sign Up',
-              'lib/assets/LogoTrello.png',
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TrelloSignUpPage()),
-                );
-              },
             ),
           ],
         ),
