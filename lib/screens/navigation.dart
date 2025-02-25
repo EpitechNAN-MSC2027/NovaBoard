@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'tableau.dart';
-import 'detail_tableau.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({Key? key}) : super(key: key);
@@ -12,11 +11,6 @@ class NavigationScreen extends StatefulWidget {
 class NavigationScreenState extends State<NavigationScreen> {
   int _selectedIndex = 0;
 
-  final Map<String, dynamic> _emptyTableau = {
-    'nom': 'Aucun Tableau',
-    'taches': [],
-  };
-
   final List<Widget> _pages = [];
 
   @override
@@ -24,7 +18,7 @@ class NavigationScreenState extends State<NavigationScreen> {
     super.initState();
     _pages.addAll([
       const TableauScreen(),
-      DetailTableauScreen(tableau: _emptyTableau),
+      const Center(child: Text('Cartes')),
       const Center(child: Text('Recherche')),
       const Center(child: Text('Notifications')),
       const Center(child: Text('Profil')),
@@ -52,6 +46,10 @@ class NavigationScreenState extends State<NavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.assignment),
             label: 'Tableaux',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.view_list),
+            label: 'Cartes',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
