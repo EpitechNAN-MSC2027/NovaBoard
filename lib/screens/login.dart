@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
+import 'pin_setup_screen.dart';
+import 'pin_entry_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -14,46 +16,62 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkBiometricAuth();
+    _checkExistingAuth();
   }
 
-  Future<void> _checkBiometricAuth() async {
+  Future<void> _checkExistingAuth() async {
     String? storedToken = await _authService.getStoredAccessToken();
     if (storedToken != null) {
-      bool isAuthenticated = await _authService.authenticateWithBiometrics();
-      if (isAuthenticated && mounted) {
-        print("Biometric Authentication Successful. Redirecting...");
-        Navigator.pushReplacementNamed(context, '/navigation');
+      bool isPinSetup = await _authService.isPinSetup();
+
+      if (isPinSetup) {
+        // If PIN is set up, go directly to PIN entry
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PinEntryScreen()),
+          );
+          return;
+        }
       } else {
-        print("Biometric Authentication Failed or Canceled.");
+        // Token exists but no PIN setup yet
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+          );
+          return;
+        }
       }
     }
+    // If no token or PIN, stay on login screen
   }
 
   Future<void> _handleSignIn(BuildContext context) async {
     try {
-      await _checkBiometricAuth(); // Try biometric auth first
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
 
-      String? storedToken = await _authService.getStoredAccessToken();
-      if (storedToken == null) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return const Center(child: CircularProgressIndicator());
-          },
-        );
+      await _authService.authenticateWithTrello();
 
-        await _authService.authenticateWithTrello();
-
-        if (mounted) Navigator.of(context).pop();
-
-        storedToken = await _authService.getStoredAccessToken();
+      if (mounted) {
+        Navigator.of(context).pop(); // Close the loading dialog
       }
 
+      String? storedToken = await _authService.getStoredAccessToken();
       if (storedToken != null && mounted) {
-        print("Authentication successful. Redirecting...");
-        Navigator.pushReplacementNamed(context, '/navigation');
+        print("Trello Authentication successful. Setting up PIN...");
+
+        // Navigate to PIN setup screen for first-time users
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+        );
       } else {
         print("Authentication Failed.");
         if (mounted) {
@@ -65,7 +83,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       print("Authentication Error: $e");
       if (mounted) {
-        Navigator.of(context).pop(false);
+        try {
+          Navigator.of(context).pop(); // Close the loading dialog if open
+        } catch (_) {}
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Authentication error: ${e.toString()}')),

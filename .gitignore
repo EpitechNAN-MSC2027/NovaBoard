@@ -44,7 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-demo_main.dart
-
 *.env
+
+demo_main.dart
 trello_test_screen.dart

@@ -134,6 +134,20 @@ class TrelloAuthService {
     }
   }
 
+  /// Check if biometrics are available on the device
+  Future<bool> isBiometricsAvailable() async {
+    try {
+      // Check if the device supports biometrics
+      bool canCheckBiometrics = await auth.canCheckBiometrics;
+      // Check if the device is capable of checking biometrics
+      bool isBiometricSupported = await auth.isDeviceSupported();
+      return canCheckBiometrics && isBiometricSupported;
+    } on Exception catch (e) {
+      print('Biometric Availability Check Error: $e');
+      return false;
+    }
+  }
+
   /// Authenticate using biometrics
   Future<bool> authenticateWithBiometrics() async {
     bool authenticated = false;
@@ -148,6 +162,12 @@ class TrelloAuthService {
       print('Biometric Authentication Error: $e');
     }
     return authenticated;
+  }
+
+  /// Check if PIN has been set up
+  Future<bool> isPinSetup() async {
+    String? isPinSetup = await storage.read(key: 'pin_setup_complete');
+    return isPinSetup == 'true';
   }
 
   /// Retrieve stored Trello access token
