@@ -20,4 +20,3 @@ jobs:
             git@github.com:EpitechMscProPromo2027/T-DEV-600-NAN_2.git
           ssh_private_key:
             ${{ secrets.SSH_SECRET }}
-          force_push: "true"
