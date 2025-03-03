@@ -1,4 +1,4 @@
-# nova_board
+# NovaBoard
 
 A Trello like mobile app.
 
