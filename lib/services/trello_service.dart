@@ -202,7 +202,7 @@ class TrelloService {
   Future<bool> deleteBoard(String boardId) async {
     // In Trello, boards are "closed" rather than deleted
     final url = _buildUrl('boards/$boardId', {'closed': 'true'});
-    final response = await http.put(url);
+    final response = await http.delete(url);
 
     if (response.statusCode == 200) {
       return true;

@@ -19,6 +19,7 @@ class NavigationScreenState extends State<NavigationScreen> {
   Map<String, dynamic>? _selectedWorkspace;
   Map<String, dynamic>? _selectedTableau;
 
+
   final List<Function> _pages = [];
 
   @override
@@ -30,9 +31,10 @@ class NavigationScreenState extends State<NavigationScreen> {
         workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
       ),
           () => ListesScreen(
-        workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
-        tableau: _selectedTableau ?? {'nom': 'Aucun tableau sélectionné', 'listes': []},
-      ),
+            workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
+            tableaux: _selectedTableau ?? {'nom': 'Aucun tableau sélectionné', 'tableaux': []},
+          ),
+
           () => const CarteScreen(),
           () => const Center(child: Text('Recherche')),
           () => const Center(child: Text('Notifications')),
@@ -55,14 +57,12 @@ class NavigationScreenState extends State<NavigationScreen> {
   void setSelectedTableau(Map<String, dynamic> workspace, Map<String, dynamic> tableau) {
     setState(() {
       _selectedWorkspace = workspace;
-      _selectedTableau = tableau;
       _selectedIndex = 2;
     });
   }
 
   void setSelectedListe(Map<String, dynamic> tableau, Map<String, dynamic> liste) {
     setState(() {
-      _selectedTableau = tableau;
       _selectedIndex = 3;
     });
   }

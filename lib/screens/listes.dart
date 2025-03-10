@@ -3,12 +3,12 @@ import 'detail_carte.dart';
 
 class ListesScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
-  final Map<String, dynamic> tableau;
+  final Map<String, dynamic> tableaux;
 
   const ListesScreen({
     Key? key,
     required this.workspace,
-    required this.tableau,
+    required this.tableaux
   }) : super(key: key);
 
   @override
@@ -25,7 +25,10 @@ class ListesScreenState extends State<ListesScreen> {
   void initState() {
     super.initState();
     if (widget.workspace['tableaux'] != null && widget.workspace['tableaux'].isNotEmpty) {
-      _selectedTableau = widget.workspace['tableaux'][0];
+      _selectedTableau = widget.tableaux;
+    }
+    else {
+      _selectedTableau = {'nom': 'Aucun tableau sélectionné', 'listes': []};
     }
   }
 
@@ -78,17 +81,28 @@ class ListesScreenState extends State<ListesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var listes = widget.tableau['listes'] ?? widget.tableau['liste'] ?? [];
-    if (listes.isNotEmpty && listes[0] is String) {
-      listes = listes.map((e) => {'nom': e, 'cartes': []}).toList();
-    }
-    print("Listes après conversion : $listes");
+    var tableaux = widget.workspace['tableaux'] ?? [];
 
-    if (_selectedTableau == null || !listes.contains(_selectedTableau)) {
-      _selectedTableau = listes.isNotEmpty ? listes.first : null;
+    if (tableaux.isNotEmpty && tableaux[0] is String) {
+      tableaux = tableaux.map((e) => {'nom': e, 'listes': []}).toList();
     }
+    print("tableaux après conversion : $tableaux");
 
-    return Scaffold(
+    if (_selectedTableau!['liste'] != null) {
+      _selectedTableau!['liste'] = (_selectedTableau!['liste'] as List)
+          .map((e) => e is String ? {'nom': e, 'cartes': []} : e)
+          .toList();
+    }
+    return Stack(
+        children: [
+    Container(
+    decoration: const BoxDecoration(
+    image: DecorationImage(
+        image: AssetImage('lib/assets/FondApp.png'),
+    fit: BoxFit.cover,
+    ),
+    ),
+    ),Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: DropdownButton<Map<String, dynamic>>(
@@ -98,7 +112,7 @@ class ListesScreenState extends State<ListesScreen> {
               _selectedTableau = newValue;
             });
           },
-          items: listes.map<DropdownMenuItem<Map<String, dynamic>>>((tableau) {
+          items: tableaux.map<DropdownMenuItem<Map<String, dynamic>>>((tableau) {
             print("Valeur actuelle de tableau dans map(): $tableau");
 
             return DropdownMenuItem<Map<String, dynamic>>(
@@ -114,7 +128,8 @@ class ListesScreenState extends State<ListesScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            ..._selectedTableau!['listes']?.map<Widget>((liste) {
+            ..._selectedTableau!['liste']?.map<Widget>((liste) {
+              print("Liste affichée : $liste");
               return Container(
                 width: 300, // Pour occuper plus de place
                 margin: const EdgeInsets.all(8.0),
@@ -199,6 +214,8 @@ class ListesScreenState extends State<ListesScreen> {
           ],
         ),
       ),
+    )
+        ]
     );
   }
 }
