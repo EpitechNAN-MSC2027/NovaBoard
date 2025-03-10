@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/navigation': (context) => const NavigationScreen(),
+        '/navigation': (context) =>  NavigationScreen(),
       },
       debugShowCheckedModeBanner: false,
       
