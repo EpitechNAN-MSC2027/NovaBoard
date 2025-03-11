@@ -387,7 +387,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                                       builder: (context) =>
                                           ListesScreen(
                                             workspace: widget.workspace,
-                                            tableaux: tableau,
+                                            tableau: tableau,
                                           ),
                                     ),
                                   );

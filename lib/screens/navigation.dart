@@ -32,7 +32,7 @@ class NavigationScreenState extends State<NavigationScreen> {
       ),
           () => ListesScreen(
             workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
-            tableaux: _selectedTableau ?? {'nom': 'Aucun tableau sélectionné', 'tableaux': []},
+            tableau: _selectedTableau ?? {'nom': 'Aucun tableau sélectionné', 'tableaux': []},
           ),
 
           () => const CarteScreen(),
