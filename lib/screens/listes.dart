@@ -300,7 +300,6 @@ class ListesScreenState extends State<ListesScreen> {
                     desc: _cardDescriptionController.text,
                   );
                   print("a");
-
                   setState(() {
                     for (var liste in _listes ?? []) {
                       print(liste);
@@ -352,6 +351,76 @@ class ListesScreenState extends State<ListesScreen> {
         SnackBar(content: Text('Erreur lors de la suppression de la carte: $e')),
       );
     }
+  }
+
+  void _gererMembresCarte(Map<String, dynamic> carte) async {
+    List<dynamic> membres = carte['idMembers'] ?? [];
+    TextEditingController emailController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("👥 Membres de la Carte", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  if (membres.isEmpty)
+                    const Text("Aucun membre assigné"),
+                  ...membres.map((membreId) => ListTile(
+                    title: Text(membreId),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.remove_circle, color: Colors.red),
+                      onPressed: () async {
+                        try {
+                          await _trelloService!.removeMemberFromCard(carte['id'], membreId);
+                          setStateModal(() {
+                            membres.remove(membreId);
+                          });
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Erreur lors de la suppression : $e")),
+                          );
+                        }
+                      },
+                    ),
+                  )),
+                  const Divider(),
+                  const Text("➕ Ajouter un membre"),
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(labelText: "ID du membre"),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (emailController.text.isNotEmpty) {
+                        try {
+                          await _trelloService!.addMemberToCard(carte['id'], emailController.text);
+                          setStateModal(() {
+                            membres.add(emailController.text);
+                          });
+                          emailController.clear();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Erreur lors de l'ajout : $e")),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Ajouter"),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -464,18 +533,20 @@ class ListesScreenState extends State<ListesScreen> {
                                       ),
                                     );
                                   },
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _editerCarte(
-                                            carte['id'], carte['name'] ?? "Sans titre", carte['desc'] ?? ""),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => _supprimerCarte(liste, cardIndex),
-                                      ),
+                                  trailing: PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        _editerCarte(carte['id'], carte['name'], carte['desc']);
+                                      } else if (value == 'delete') {
+                                        _supprimerCarte(liste, cardIndex);
+                                      } else if (value == 'manage_members') {
+                                        _gererMembresCarte(carte);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(value: 'edit', child: Text('✏️ Modifier')),
+                                      const PopupMenuItem(value: 'delete', child: Text('🗑️ Supprimer')),
+                                      const PopupMenuItem(value: 'manage_members', child: Text('👥 Assigner des membres')),
                                     ],
                                   ),
                                 ),
