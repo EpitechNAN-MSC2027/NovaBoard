@@ -412,8 +412,8 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                                 );
                               },
                             )
-                            ),
-                          );
+                          ),
+                        );
                       },
                     ),
                   ),

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
-import 'carte.dart';
 import 'workspaces.dart';
-import 'tableau.dart';
-import 'listes.dart';
 import 'trello_test_screen.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
@@ -20,32 +17,16 @@ class NavigationScreenState extends State<NavigationScreen> {
 
   int _selectedIndex = 0;
 
-  Map<String, dynamic>? _selectedWorkspace;
-  Map<String, dynamic>? _selectedTableau;
-
-
   final List<Function> _pages = [];
 
   @override
   void initState() {
     super.initState();
     _pages.addAll([
-          () => const  WorkspacesScreen(),
-          () => TableauScreen(
-        workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
-      ),
-          () => ListesScreen(
-            workspace: _selectedWorkspace ?? {'nom': 'Aucun workspace sélectionné', 'tableaux': []},
-            tableaux: _selectedTableau ?? {'nom': 'Aucun tableau sélectionné', 'tableaux': []},
-          ),
-
-          () => const CarteScreen(),
+          () => const WorkspacesScreen(),
           () => const Center(child: Text('Recherche')),
           () => const Center(child: Text('Notifications')),
           () => const TrelloDashboard(),
-      () => const WorkspacesScreen(),
-      () => const Center(child: Text('Recherche')),
-      () => const Center(child: Text('Notifications')),
     ]);
   }
 
