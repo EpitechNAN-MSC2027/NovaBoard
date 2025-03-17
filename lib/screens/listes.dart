@@ -299,10 +299,8 @@ class ListesScreenState extends State<ListesScreen> {
                     name: _cardNameController.text,
                     desc: _cardDescriptionController.text,
                   );
-                  print("a");
                   setState(() {
-                    for (var liste in _listes ?? []) {
-                      print(liste);
+                    for (var liste in _listes) {
                       for (var card in liste['cartes'] ?? []) {
                         if (card['id'] == cardId) {
                           card['name'] = _cardNameController.text;
@@ -312,11 +310,8 @@ class ListesScreenState extends State<ListesScreen> {
                       }
                     }
                   });
-                  print("b");
 
                   if (context.mounted) Navigator.of(context).pop();
-                  print("c");
-
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -523,7 +518,12 @@ class ListesScreenState extends State<ListesScreen> {
                               return Card(
                                 child: ListTile(
                                   title: Text(carte['name'] ?? "Sans titre"),
-                                  subtitle: Text(carte['description'] ?? "Sans titre"),
+                                  subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
+                                      ? Text(
+                                    carte['desc'],
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ) : null,
                                   onTap: () {
                                     Navigator.push(
                                       context,

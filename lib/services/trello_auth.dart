@@ -210,4 +210,10 @@ class TrelloAuthService {
             .map((e) => '${Uri.encodeComponent(e.key)}="${Uri.encodeComponent(e.value)}"')
             .join(', ')}';
   }
+
+  Future<void> logout() async {
+    await storage.delete(key: 'trello_access_token');
+    await storage.delete(key: 'oauth_token_secret');
+    print('User logged out and credentials cleared.');
+  }
 }

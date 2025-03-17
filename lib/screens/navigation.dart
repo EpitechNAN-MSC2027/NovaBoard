@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/trello_auth.dart';
 import 'workspaces.dart';
+import 'trello_test_screen.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
 
@@ -11,6 +13,8 @@ class NavigationScreen extends StatefulWidget {
 }
 
 class NavigationScreenState extends State<NavigationScreen> {
+  final TrelloAuthService _authService = TrelloAuthService();
+
   int _selectedIndex = 0;
 
   final List<Function> _pages = [];
@@ -19,18 +23,20 @@ class NavigationScreenState extends State<NavigationScreen> {
   void initState() {
     super.initState();
     _pages.addAll([
-      () => const WorkspacesScreen(),
-      () => const Center(child: Text('Recherche')),
-      () => const Center(child: Text('Notifications')),
+          () => const WorkspacesScreen(),
+          () => const Center(child: Text('Recherche')),
+          () => const Center(child: Text('Notifications')),
+          () => const TrelloDashboard(),
+          () => logout(),
     ]);
   }
 
+  void logout() {
+    _authService.logout();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   void setSelectedIndex(int index) {
-    if (index == 3) {
-      // Remplacer par la logique réelle de déconnexion
-      print("Déconnexion déclenchée");
-      return;
-    }
     setState(() {
       _selectedIndex = index;
     });
@@ -57,6 +63,7 @@ class NavigationScreenState extends State<NavigationScreen> {
         Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
+            centerTitle: true,
             backgroundColor: Colors.transparent,
             title: GestureDetector(
               onTapDown: (TapDownDetails details) {
@@ -88,6 +95,10 @@ class NavigationScreenState extends State<NavigationScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.notifications),
                 label: 'Notifications',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.bug_report),
+                label: 'TEST',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.logout),
