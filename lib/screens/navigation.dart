@@ -27,15 +27,16 @@ class NavigationScreenState extends State<NavigationScreen> {
           () => const Center(child: Text('Recherche')),
           () => const Center(child: Text('Notifications')),
           () => const TrelloDashboard(),
+          () => logout(),
     ]);
   }
 
+  void logout() {
+    _authService.logout();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   void setSelectedIndex(int index) {
-    if (index == 3) {
-      // Remplacer par la logique réelle de déconnexion
-      _authService.logout();
-      Navigator.pushReplacementNamed(context, '/login');
-    }
     setState(() {
       _selectedIndex = index;
     });
