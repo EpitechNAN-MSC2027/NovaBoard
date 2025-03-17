@@ -31,6 +31,11 @@ class NavigationScreenState extends State<NavigationScreen> {
   }
 
   void setSelectedIndex(int index) {
+    if (index == 3) {
+      // Remplacer par la logique réelle de déconnexion
+      _authService.logout();
+      Navigator.pushReplacementNamed(context, '/login');
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -61,7 +66,6 @@ class NavigationScreenState extends State<NavigationScreen> {
             backgroundColor: Colors.transparent,
             title: GestureDetector(
               onTapDown: (TapDownDetails details) {
-                _showProfileMenu(context, details.globalPosition);
               },
               child: Image.asset(
                 'lib/assets/LogoSombre.png',
@@ -95,45 +99,14 @@ class NavigationScreenState extends State<NavigationScreen> {
                 icon: Icon(Icons.bug_report),
                 label: 'TEST',
               ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.logout),
+                label: 'Déconnexion',
+              ),
             ],
           ),
         ),
       ],
     );
-  }
-
-  void _showProfileMenu(BuildContext context, Offset position) {
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    showMenu(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromPoints(position, position),
-        Offset.zero & overlay.size,
-      ),
-      items: [
-        const PopupMenuItem(
-          value: 'profile',
-          child: Text('Profil'),
-        ),
-        const PopupMenuItem(
-          value: 'settings',
-          child: Text('Paramètres'),
-        ),
-        const PopupMenuItem(
-          value: 'logout',
-          child: Text('Déconnexion'),
-        ),
-      ],
-    ).then((value) {
-      if (value == 'profile') {
-        debugPrint('Accès au profil utilisateur...');
-      } else if (value == 'settings') {
-        debugPrint('Accès aux paramètres...');
-      } else if (value == 'logout') {
-        _authService.logout();
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    });
   }
 }

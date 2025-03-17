@@ -77,7 +77,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
     }
   }
 
-  // Ajouter un membre à un workspace
 
   void _ajouterWorkspace() {
     _workspaceNameController.clear();
