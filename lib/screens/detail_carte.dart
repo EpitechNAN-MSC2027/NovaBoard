@@ -9,7 +9,7 @@ class DetailCarteScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(carte['nom']),
+        title: Text(carte['name']),
         backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
