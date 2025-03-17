@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
-import '../screens/listes.dart';
+import 'listes.dart';
 
 class WorkspaceDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
