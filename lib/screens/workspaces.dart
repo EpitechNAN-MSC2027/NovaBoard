@@ -7,6 +7,7 @@ import 'workspace_details.dart';
 class WorkspacesScreen extends StatefulWidget {
   const WorkspacesScreen({Key? key}) : super(key: key);
 
+
   @override
   WorkspacesScreenState createState() => WorkspacesScreenState();
 }
@@ -21,6 +22,7 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
 
   final TextEditingController _workspaceNameController = TextEditingController();
   final TextEditingController _workspaceDescriptionController = TextEditingController();
+
 
   @override
   void initState() {
@@ -74,6 +76,8 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
       });
     }
   }
+
+  // Ajouter un membre à un workspace
 
   void _ajouterWorkspace() {
     _workspaceNameController.clear();
@@ -243,6 +247,97 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
     }
   }
 
+  void _gererMembres(Map<String, dynamic> workspace) async {
+    List<dynamic> membres = [];
+    try {
+      membres = await _trelloService!.getMembersForWorkspace(workspace['id']);
+      print("Membres chargés : $membres");
+    } catch (e) {
+      print("Erreur lors du chargement des membres : $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors du chargement des membres : $e")),
+      );
+    }
+
+    TextEditingController emailController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("👥 Membres du Workspace", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  ...membres.map((membre) {
+                    print("👤 Affichage du membre : $membre");
+                    return ListTile(
+                      title: Text(membre['fullName'] ?? 'Utilisateur inconnu'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        onPressed: () async {
+                          try {
+                            await _trelloService!.removeMemberFromWorkspace(workspace['id'], membre['id']);
+                            setStateModal(() {
+                              membres.remove(membre);
+                            });
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Erreur lors de la suppression : $e")),
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+
+                  const Divider(),
+                  const Text("➕ Ajouter un membre"),
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(labelText: "Email du membre"),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (emailController.text.isNotEmpty) {
+                        try {
+                          final newMember = await _trelloService!.addMemberToWorkspace(
+                            workspace['id'],
+                            emailController.text,
+                          );
+
+                          print("Nouveau membre ajouté : $newMember");
+                          final updatedMembers = await _trelloService!.getMembersForWorkspace(workspace['id']);
+
+                          setStateModal(() {
+                            membres.clear();
+                            membres.addAll(updatedMembers);
+                          });
+
+                          emailController.clear();
+                        } catch (e) {
+                          print("Erreur lors de l'ajout du membre : $e");
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Erreur lors de l'ajout : $e")),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Ajouter"),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,7 +347,7 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 80),
+                const SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -271,7 +366,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 if (_isLoading)
                   const Center(child: CircularProgressIndicator())
                 else if (_errorMessage.isNotEmpty)
@@ -293,33 +387,33 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                               leading: const Icon(Icons.workspaces, color: Colors.deepPurple),
                               title: Text(workspace['displayName'] ?? 'No name'),
                               subtitle: Text(workspace['desc'] ?? 'No Description'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.blue),
-                                    onPressed: () => _editerWorkspace(index),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _supprimerWorkspace(index),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_forward, color: Colors.black),
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _editerWorkspace(index);
+                                  } else if (value == 'delete') {
+                                    _supprimerWorkspace(index);
+                                  } else if (value == 'manage_members') {
+                                    _gererMembres(workspace);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(value: 'edit', child: Text('✏️ Modifier')),
+                                  const PopupMenuItem(value: 'delete', child: Text('🗑️ Supprimer')),
+                                  const PopupMenuItem(value: 'manage_members', child: Text('👥 Gérer les membres')),
                                 ],
                               ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
+                                  ),
+                                );
+                              },
+                            )
                             ),
-                          ),
-                        );
+                          );
                       },
                     ),
                   ),

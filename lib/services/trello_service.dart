@@ -22,6 +22,82 @@ class TrelloService {
     return Uri.parse('$baseUrl$path').replace(queryParameters: queryParameters);
   }
 
+  Future<Map<String, dynamic>> addMemberToWorkspace(String workspaceId, String email) async {
+    final url = 'https://api.trello.com/1/organizations/$workspaceId/members';
+    final response = await http.put(
+      Uri.parse('$url?email=$email&key=$apiKey&token=$token'),
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Erreur lors de l\'ajout du membre : ${response.body}');
+    }
+  }
+
+  Future<void> removeMemberFromWorkspace(String workspaceId, String memberId) async {
+    final url = 'https://api.trello.com/1/organizations/$workspaceId/members/$memberId';
+    final response = await http.delete(
+      Uri.parse('$url?key=$apiKey&token=$token'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Erreur lors de la suppression du membre : ${response.body}');
+    }
+  }
+
+  Future<List<dynamic>> getMembersForWorkspace(String workspaceId) async {
+    final url = "https://api.trello.com/1/organizations/$workspaceId/members?key=$apiKey&token=$token";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> members = jsonDecode(response.body);
+        print("Membres du workspace récupérés : $members");
+        return members;
+      } else {
+        throw Exception("Erreur lors de la récupération des membres : ${response.body}");
+      }
+    } catch (e) {
+      print("Erreur réseau : $e");
+      return [];
+    }
+  }
+
+  Future<void> addMemberToCard(String cardId, String memberId) async {
+    final url = _buildUrl('cards/$cardId/idMembers', {'value': memberId});
+    final response = await http.post(url);
+    if (response.statusCode != 200) {
+      throw Exception('Erreur lors de l\'ajout du membre : ${response.body}');
+    }
+  }
+
+  Future<void> removeMemberFromCard(String cardId, String memberId) async {
+    final url = _buildUrl('cards/$cardId/idMembers/$memberId');
+    final response = await http.delete(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Erreur lors de la suppression du membre : ${response.body}');
+    }
+  }
+
+  Future<void> updateBoardVisibility({
+    required String boardId,
+    required String visibility,
+  }) async {
+    final params = {
+      'prefs/permissionLevel': visibility,
+    };
+
+    final url = _buildUrl('boards/$boardId');
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update board visibility: ${response.body}');
+    }
+  }
+
   // ============ WORKSPACES (ORGANIZATIONS) OPERATIONS ============
 
   /// Get all workspaces for the current member
@@ -172,7 +248,7 @@ class TrelloService {
     required String name,
     String? desc,
     String? idOrganization,
-    String? defaultLists = "true", // create default lists by default
+    String? defaultLists = "true",
     String? prefs,
   }) async {
     final params = {
@@ -224,12 +300,14 @@ class TrelloService {
     String? desc,
     String? closed,
     String? prefs,
+    String? idOrganization,
   }) async {
     final params = {
       if (name != null) 'name': name,
       if (desc != null) 'desc': desc,
       if (closed != null) 'closed': closed,
       if (prefs != null) 'prefs': prefs,
+      if (idOrganization != null) 'idOrganization': idOrganization,
     };
 
     final url = _buildUrl('boards/$boardId');

@@ -20,6 +20,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
   List<dynamic> _tableaux = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  String _searchQuery = '';
 
   final TextEditingController _tableauNameController = TextEditingController();
   final TextEditingController _tableauDescriptionController = TextEditingController();
@@ -70,20 +71,25 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
       return;
     }
     try {
-      print("🔄 Loading tableaux for workspace: ${widget.workspace['id']}");
-      final tableaux = await _trelloService!.getBoardsForWorkspace(
-          widget.workspace['id']);
+      print("Chargement des tableaux pour workspace: ${widget.workspace['id']}");
+      final tableaux = await _trelloService!.getBoardsForWorkspace(widget.workspace['id']);
+
+      for (var tableau in tableaux) {
+        print("Tableau : ${tableau['name']}, Visibilité : ${tableau['prefs']?['permissionLevel'] ?? 'Inconnu'}");
+      }
+
       setState(() {
         _tableaux = tableaux;
         _isLoading = false;
       });
-      print(" Tableaux loaded successfully: $_tableaux");
+
+      print("Tableaux chargés avec succès !");
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error loading boards: $e';
+        _errorMessage = 'Erreur lors du chargement des tableaux: $e';
         _isLoading = false;
       });
-      print(" Error loading boards: $e");
+      print("Erreur lors du chargement des tableaux: $e");
     }
   }
 
@@ -91,7 +97,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
     _tableauNameController.clear();
     _tableauDescriptionController.clear();
     _listesTemp = [];
-
+    String selectedVisibility = "private";
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -105,20 +111,48 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                   children: [
                     TextField(
                       controller: _tableauNameController,
-                      decoration: const InputDecoration(
-                          labelText: 'Nom du tableau'),
+                      decoration: const InputDecoration(labelText: 'Nom du tableau'),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _tableauDescriptionController,
-                      decoration: const InputDecoration(
-                          labelText: 'Description'),
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Visibilité :", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        DropdownButton<String>(
+                          value: selectedVisibility,
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setStateModal(() {
+                                selectedVisibility = newValue;
+                              });
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: "private",
+                              child: Text("Privé"),
+                            ),
+                            DropdownMenuItem(
+                              value: "public",
+                              child: Text("Public"),
+                            ),
+                            DropdownMenuItem(
+                              value: "org",
+                              child: Text("Organisation"),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _listNameController,
-                      decoration: const InputDecoration(
-                          labelText: 'Nom de la liste'),
+                      decoration: const InputDecoration(labelText: 'Nom de la liste'),
                     ),
                     ElevatedButton(
                       onPressed: () {
@@ -135,18 +169,17 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                       child: const Text('Ajouter une liste'),
                     ),
                     const SizedBox(height: 10),
-                    ..._listesTemp.map((list) =>
-                        ListTile(
-                          title: Text(list['nom']),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setStateModal(() {
-                                _listesTemp.remove(list);
-                              });
-                            },
-                          ),
-                        )),
+                    ..._listesTemp.map((list) => ListTile(
+                      title: Text(list['nom']),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          setStateModal(() {
+                            _listesTemp.remove(list);
+                          });
+                        },
+                      ),
+                    )),
                   ],
                 ),
               ),
@@ -165,6 +198,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                               ? _tableauDescriptionController.text
                               : null,
                           idOrganization: widget.workspace['id'],
+                          prefs: selectedVisibility,
                         );
 
                         for (var liste in _listesTemp) {
@@ -173,7 +207,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                             name: liste['nom'],
                           );
                         }
-
                         setState(() {
                           _tableaux.add(newTableau);
                         });
@@ -182,8 +215,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(
-                                'Erreur lors de la création du tableau: $e')),
+                            SnackBar(content: Text('Erreur lors de la création du tableau: $e')),
                           );
                         }
                       }
@@ -201,61 +233,101 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
 
   void _editerTableau(int index) {
     _tableauNameController.text = _tableaux[index]['name'] ?? 'Sans nom';
-    _tableauDescriptionController.text =
-        _tableaux[index]['desc'] ?? 'Sans description';
+    _tableauDescriptionController.text = _tableaux[index]['desc'] ?? 'Sans description';
+    String currentVisibility = _tableaux[index]['prefs']?['permissionLevel'] ?? 'private';
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Modifier le tableau'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _tableauNameController,
-                decoration: const InputDecoration(labelText: 'Nom du tableau'),
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return AlertDialog(
+              title: const Text('Modifier le tableau'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _tableauNameController,
+                    decoration: const InputDecoration(labelText: 'Nom du tableau'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _tableauDescriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Visibilité :", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      DropdownButton<String>(
+                        value: currentVisibility,
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setStateModal(() {
+                              currentVisibility = newValue;
+                            });
+                          }
+                        },
+                        items: const [
+                          DropdownMenuItem(
+                            value: "private",
+                            child: Text("Privé"),
+                          ),
+                          DropdownMenuItem(
+                            value: "public",
+                            child: Text("Public"),
+                          ),
+                          DropdownMenuItem(
+                            value: "org",
+                            child: Text("Organisation"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _tableauDescriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  final updatedTableau = await _trelloService!.updateBoard(
-                    boardId: _tableaux[index]['id'],
-                    name: _tableauNameController.text,
-                    desc: _tableauDescriptionController.text.isNotEmpty
-                        ? _tableauDescriptionController.text
-                        : null,
-                  );
-
-                  setState(() {
-                    _tableaux[index] = updatedTableau;
-                  });
-
-                  if (context.mounted) Navigator.of(context).pop();
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(
-                          'Erreur lors de la modification du tableau: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Enregistrer'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      print("Mise à jour du tableau : ${_tableaux[index]['id']}");
+                      print("Nouvelle visibilité : $currentVisibility");
+                      final updatedTableau = await _trelloService!.updateBoard(
+                        boardId: _tableaux[index]['id'],
+                        name: _tableauNameController.text,
+                        desc: _tableauDescriptionController.text.isNotEmpty
+                            ? _tableauDescriptionController.text
+                            : null,
+                      );
+                      if (updatedTableau['prefs']['permissionLevel'] != currentVisibility) {
+                        print(" Mise à jour de la visibilité...");
+                        await _trelloService!.updateBoardVisibility(
+                          boardId: _tableaux[index]['id'],
+                          visibility: currentVisibility,
+                        );
+                        print("Visibilité mise à jour !");
+                      }
+                      await _loadTableaux();
+                      if (context.mounted) Navigator.of(context).pop();
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Erreur lors de la modification du tableau: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Enregistrer'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -264,7 +336,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
   void _supprimerTableau(int index) async {
 
     if (_trelloService == null) {
-      print("❌ TrelloService is not initialized!");
+      print(" TrelloService is not initialized!");
       return;
     }
 
@@ -339,14 +411,41 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(
-                            Icons.arrow_back, color: Colors.black, size: 30),
-                        onPressed: () =>
-                            Navigator.of(context).pop(), // Retour en arrière
+                        icon: const Icon(Icons.arrow_back, color: Colors.black, size: 30),
+                        onPressed: () => Navigator.of(context).pop(),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Tableaux',
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                                filled: true,
+                                fillColor: Colors.white.withAlpha((0.8 * 255).toInt()),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       IconButton(
-                        icon: const Icon(
-                            Icons.add, color: Colors.black, size: 30),
+                        icon: const Icon(Icons.add, color: Colors.black, size: 30),
                         onPressed: _ajouterTableau,
                       ),
                     ],
@@ -361,10 +460,13 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                     Center(child: Text(_errorMessage))
                   else
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: _tableaux.length,
-                        itemBuilder: (context, index) {
-                          final tableau = _tableaux[index];
+                      child: Builder(
+                        builder: (context) {
+                          final tableauxFiltres = _tableaux.where((t) => t['name']?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false).toList();
+                          return ListView.builder(
+                            itemCount: tableauxFiltres.length,
+                            itemBuilder: (context, index) {
+                              final tableau = tableauxFiltres[index];
                           return Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 5),
@@ -380,14 +482,14 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                                 title: Text(tableau['name'] ?? 'Sans nom'),
                                 subtitle: Text(
                                     tableau['desc'] ?? 'Sans description'),
-                                onTap: () { // ✅ Redirige directement en cliquant sur la boxe
+                                onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
                                           ListesScreen(
                                             workspace: widget.workspace,
-                                            tableaux: tableau,
+                                            tableau: tableau,
                                           ),
                                     ),
                                   );
@@ -412,13 +514,13 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                             ),
                           );
                         },
-                      ),
-                    ),
-              ],
+                      );
+                    },
+    ),
             ),
-          ),
-        ],
+    ],
+    ),
       ),
-    );
+    ]));
   }
 }

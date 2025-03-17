@@ -23,6 +23,7 @@ class NavigationScreenState extends State<NavigationScreen> {
   Map<String, dynamic>? _selectedWorkspace;
   Map<String, dynamic>? _selectedTableau;
 
+
   final List<Function> _pages = [];
 
   @override
@@ -42,6 +43,9 @@ class NavigationScreenState extends State<NavigationScreen> {
           () => const Center(child: Text('Recherche')),
           () => const Center(child: Text('Notifications')),
           () => const TrelloDashboard(),
+      () => const WorkspacesScreen(),
+      () => const Center(child: Text('Recherche')),
+      () => const Center(child: Text('Notifications')),
     ]);
   }
 
@@ -53,21 +57,7 @@ class NavigationScreenState extends State<NavigationScreen> {
 
   void setSelectedWorkspace(Map<String, dynamic> workspace) {
     setState(() {
-      _selectedWorkspace = workspace;
-      _selectedIndex = 1;
-    });
-  }
-
-  void setSelectedTableau(Map<String, dynamic> workspace, Map<String, dynamic> tableau) {
-    setState(() {
-      _selectedWorkspace = workspace;
-      _selectedIndex = 2;
-    });
-  }
-
-  void setSelectedListe(Map<String, dynamic> tableau, Map<String, dynamic> liste) {
-    setState(() {
-      _selectedIndex = 3;
+      _selectedIndex = 0;
     });
   }
 
@@ -111,18 +101,6 @@ class NavigationScreenState extends State<NavigationScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.business),
                 label: 'Workspaces',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.assignment),
-                label: 'Tableaux',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.view_list),
-                label: 'Listes',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.description),
-                label: 'Cartes',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.search),
