@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/trello_auth.dart';
 import 'carte.dart';
 import 'workspaces.dart';
 import 'tableau.dart';
 import 'listes.dart';
+import 'trello_test_screen.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
 
@@ -14,11 +16,12 @@ class NavigationScreen extends StatefulWidget {
 }
 
 class NavigationScreenState extends State<NavigationScreen> {
+  final TrelloAuthService _authService = TrelloAuthService();
+
   int _selectedIndex = 0;
 
   Map<String, dynamic>? _selectedWorkspace;
   Map<String, dynamic>? _selectedTableau;
-
 
   final List<Function> _pages = [];
 
@@ -38,6 +41,7 @@ class NavigationScreenState extends State<NavigationScreen> {
           () => const CarteScreen(),
           () => const Center(child: Text('Recherche')),
           () => const Center(child: Text('Notifications')),
+          () => const TrelloDashboard(),
     ]);
   }
 
@@ -82,6 +86,7 @@ class NavigationScreenState extends State<NavigationScreen> {
         Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
+            centerTitle: true,
             backgroundColor: Colors.transparent,
             title: GestureDetector(
               onTapDown: (TapDownDetails details) {
@@ -127,6 +132,10 @@ class NavigationScreenState extends State<NavigationScreen> {
                 icon: Icon(Icons.notifications),
                 label: 'Notifications',
               ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.bug_report),
+                label: 'TEST',
+              ),
             ],
           ),
         ),
@@ -158,12 +167,13 @@ class NavigationScreenState extends State<NavigationScreen> {
         ),
       ],
     ).then((value) {
-      if (value == 'logout') {
-        debugPrint('Déconnexion en cours...');
-      } else if (value == 'profile') {
+      if (value == 'profile') {
         debugPrint('Accès au profil utilisateur...');
       } else if (value == 'settings') {
         debugPrint('Accès aux paramètres...');
+      } else if (value == 'logout') {
+        _authService.logout();
+        Navigator.pushReplacementNamed(context, '/login');
       }
     });
   }

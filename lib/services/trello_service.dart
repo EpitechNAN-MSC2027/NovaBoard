@@ -147,6 +147,26 @@ class TrelloService {
     }
   }
 
+  /// Get available public board templates
+  Future<List<dynamic>> getBoardTemplates({String? searchTerm}) async {
+    // Use the search endpoint to find public templates
+    final url = _buildUrl('boards/templates/gallery', {
+      'fields': 'name,desc,prefs',
+      if (searchTerm != null && searchTerm.isNotEmpty) 'search': searchTerm,
+    });
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      // Extract just the boards from the search results
+      return data ?? [];
+    } else {
+      throw Exception('Failed to load board templates (Status: ${response.statusCode})');
+    }
+  }
+
+
   /// Create a new board
   Future<Map<String, dynamic>> createBoard({
     required String name,
@@ -170,6 +190,30 @@ class TrelloService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to create board: ${response.body}');
+    }
+  }
+
+  /// Create a new board from a template
+  Future<Map<String, dynamic>> createBoardFromTemplate({
+    required String name,
+    required String templateId,
+    String? idOrganization,
+    String? prefs,
+  }) async {
+    final params = {
+      'name': name,
+      'idBoardSource': templateId,
+      if (idOrganization != null) 'idOrganization': idOrganization,
+      if (prefs != null) 'prefs': prefs,
+    };
+
+    final url = _buildUrl('boards');
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create board from template: ${response.body}');
     }
   }
 

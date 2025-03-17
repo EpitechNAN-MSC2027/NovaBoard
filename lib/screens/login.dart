@@ -29,16 +29,20 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const PinEntryScreen()),
+            MaterialPageRoute(
+                builder: (BuildContext context) => const PinEntryScreen(),
+            ),
           );
           return;
         }
       } else {
         // Token exists but no PIN setup yet
         if (mounted) {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+            MaterialPageRoute(
+                builder: (BuildContext context) => const PinSetupScreen(),
+            ),
           );
           return;
         }
@@ -68,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
         print("Trello Authentication successful. Setting up PIN...");
 
         // Navigate to PIN setup screen for first-time users
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const PinSetupScreen()),
         );
