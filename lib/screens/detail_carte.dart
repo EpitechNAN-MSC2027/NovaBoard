@@ -1,15 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-class DetailCarteScreen extends StatelessWidget {
+class DetailCarteScreen extends StatefulWidget {
   final Map<String, dynamic> carte;
 
   const DetailCarteScreen({Key? key, required this.carte}) : super(key: key);
 
   @override
+  _DetailCarteScreenState createState() => _DetailCarteScreenState();
+}
+
+class _DetailCarteScreenState extends State<DetailCarteScreen> {
+  Map<String, dynamic>? _updatedCarte;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTrelloService();
+  }
+
+  void _initTrelloService() {
+    _loadCarteDetail();
+  }
+
+  void _loadCarteDetail() {
+    setState(() {
+      _updatedCarte = widget.carte;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_updatedCarte == null && _errorMessage == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.carte['name']),
+          backgroundColor: Colors.deepPurple,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.carte['name']),
+          backgroundColor: Colors.deepPurple,
+        ),
+        body: Center(child: Text(_errorMessage!)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(carte['name']),
+        title: Text(_updatedCarte!['name']),
         backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
@@ -23,9 +68,31 @@ class DetailCarteScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              carte['description'].isNotEmpty
-                  ? carte['description']
+              _updatedCarte!['desc'] != null && _updatedCarte!['desc'].isNotEmpty
+                  ? _updatedCarte!['desc']
                   : 'Aucune description',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Date limite :',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _updatedCarte!['due'] != null
+                  ? DateFormat('dd/MM/yyyy').format(DateTime.parse(_updatedCarte!['due']))
+                  : 'Non définie',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Statut :',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _updatedCarte!['dueComplete'] == true ? 'Terminé' : 'En cours',
               style: const TextStyle(fontSize: 16),
             ),
             const Spacer(),
