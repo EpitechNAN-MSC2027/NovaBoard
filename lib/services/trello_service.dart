@@ -602,4 +602,16 @@ class TrelloService {
       throw Exception('Failed to create label on board $boardId: ${response.body}');
     }
   }
+
+  Future<List<dynamic>> getNotifications() async {
+    final url = _buildUrl('members/me/notifications');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load notifications: ${response.body}');
+    }
+  }
+
 }
