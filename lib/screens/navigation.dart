@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
 import 'workspaces.dart';
-import 'trello_test_screen.dart';
+import 'notifications.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
 
@@ -25,15 +25,16 @@ class NavigationScreenState extends State<NavigationScreen> {
     _pages.addAll([
           () => const WorkspacesScreen(),
           () => const Center(child: Text('Recherche')),
-          () => const Center(child: Text('Notifications')),
-          () => const TrelloDashboard(),
-          () => logout(),
+          () => const NotificationsScreen(),
+          () => const SizedBox.shrink(),
     ]);
   }
 
-  void logout() {
-    _authService.logout();
-    Navigator.pushReplacementNamed(context, '/login');
+  Future<void> logout() async {
+    await TrelloAuthService().logout();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
   }
 
   void setSelectedIndex(int index) {
@@ -78,7 +79,36 @@ class NavigationScreenState extends State<NavigationScreen> {
           body: _pages[_selectedIndex](),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _selectedIndex,
-            onTap: setSelectedIndex,
+            onTap: (index) {
+              if (index == 3) {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: const Text('Déconnexion'),
+                      content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                          },
+                          child: const Text('Annuler'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            Navigator.of(dialogContext).pop();
+                            await logout();
+                          },
+                          child: const Text('Déconnexion'),
+    ),
+                      ],
+                    );
+                  },
+                );
+              } else {
+                setSelectedIndex(index);
+              }
+            },
             type: BottomNavigationBarType.fixed,
             selectedItemColor: Colors.deepPurple,
             unselectedItemColor: Colors.black54,
@@ -95,10 +125,6 @@ class NavigationScreenState extends State<NavigationScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.notifications),
                 label: 'Notifications',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bug_report),
-                label: 'TEST',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.logout),

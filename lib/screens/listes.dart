@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
 import 'detail_carte.dart';
+import 'package:intl/intl.dart';
 
 class ListesScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
@@ -71,7 +72,7 @@ class ListesScreenState extends State<ListesScreen> {
     });
 
     try {
-      print("📥 Chargement des listes pour le tableau ${widget.tableau['id']}");
+      print("Chargement des listes pour le tableau ${widget.tableau['id']}");
       final listes = await _trelloService!.getListsForBoard(widget.tableau['id']);
 
       for (var liste in listes) {
@@ -207,24 +208,56 @@ class ListesScreenState extends State<ListesScreen> {
   void _ajouterCarte(Map<String, dynamic> liste) {
     TextEditingController cardNameController = TextEditingController();
     TextEditingController cardDescriptionController = TextEditingController();
+    DateTime? selectedDate;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Ajouter une carte'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: cardNameController,
-                decoration: const InputDecoration(labelText: 'Nom de la carte'),
-              ),
-              TextField(
-                controller: cardDescriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-              ),
-            ],
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: cardNameController,
+                      decoration: const InputDecoration(labelText: 'Nom de la carte'),
+                    ),
+                    TextField(
+                      controller: cardDescriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Text("Date limite : "),
+                        Text(selectedDate != null
+                            ? DateFormat('dd/MM/yyyy').format(selectedDate!)
+                            : "Non définie"),
+                        IconButton(
+                          icon: const Icon(Icons.calendar_today),
+                          onPressed: () async {
+                            DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) {
+                              setState(() {
+                                selectedDate = pickedDate;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -239,6 +272,7 @@ class ListesScreenState extends State<ListesScreen> {
                       listId: liste['id'],
                       name: cardNameController.text,
                       desc: cardDescriptionController.text,
+                      due: selectedDate?.toIso8601String(),
                     );
 
                     setState(() {
@@ -264,27 +298,61 @@ class ListesScreenState extends State<ListesScreen> {
     );
   }
 
-  void _editerCarte(String cardId, String currentName, String currentDesc) {
+  void _editerCarte(String cardId, String currentName, String currentDesc, String? currentDate) {
     _cardNameController.text = currentName;
     _cardDescriptionController.text = currentDesc;
+
+    DateTime? selectedDate = currentDate != null
+        ? DateTime.parse(currentDate) : null;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Modifier la carte'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _cardNameController,
-                decoration: const InputDecoration(labelText: 'Nom de la carte'),
-              ),
-              TextField(
-                controller: _cardDescriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-              ),
-            ],
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _cardNameController,
+                      decoration: const InputDecoration(labelText: 'Nom de la carte'),
+                    ),
+                    TextField(
+                      controller: _cardDescriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Text("Date limite : "),
+                        Text(selectedDate != null
+                            ? DateFormat('dd/MM/yyyy').format(selectedDate!)
+                            : "Non définie"),
+                        IconButton(
+                          icon: const Icon(Icons.calendar_today),
+                          onPressed: () async {
+                            DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) {
+                              setState(() {
+                                selectedDate = pickedDate;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -298,13 +366,16 @@ class ListesScreenState extends State<ListesScreen> {
                     cardId: cardId,
                     name: _cardNameController.text,
                     desc: _cardDescriptionController.text,
+                    due: selectedDate?.toIso8601String(),
                   );
+
+                  final updatedCard = await _trelloService!.getCard(cardId);
+
                   setState(() {
                     for (var liste in _listes) {
-                      for (var card in liste['cartes'] ?? []) {
-                        if (card['id'] == cardId) {
-                          card['name'] = _cardNameController.text;
-                          card['desc'] = _cardDescriptionController.text;
+                      for (int i = 0; i < liste['cartes'].length; i++) {
+                        if (liste['cartes'][i]['id'] == cardId) {
+                          liste['cartes'][i] = updatedCard;
                           break;
                         }
                       }
@@ -515,28 +586,58 @@ class ListesScreenState extends State<ListesScreen> {
 
                               if (carte == null) return const SizedBox();
 
+                              bool isDone = carte['dueComplete'] ?? false;
+
                               return Card(
+                                color: Colors.deepPurple[50],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  leading: Checkbox(
+                                    value: isDone,
+                                    onChanged: (bool? newValue) async {
+                                      try {
+                                        await _trelloService!.updateCard(
+                                          cardId: carte['id'],
+                                          dueComplete: (newValue ?? false).toString(),
+                                        );
+                                        setState(() {
+                                          carte['dueComplete'] = newValue;
+                                        });
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text("Erreur lors de la mise à jour : $e")),
+                                        );
+                                      }
+                                    },
+                                  ),
                                   title: Text(carte['name'] ?? "Sans titre"),
                                   subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
                                       ? Text(
                                     carte['desc'],
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                  ) : null,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            DetailCarteScreen(carte: carte),
-                                      ),
-                                    );
+                                  )
+                                      : null,
+                                  onTap: () async {
+                                    try {
+                                      final updatedCard = await _trelloService!.getCard(carte['id']);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => DetailCarteScreen(carte: updatedCard),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Erreur lors du chargement de la carte : $e')),
+                                      );
+                                    }
                                   },
                                   trailing: PopupMenuButton<String>(
                                     onSelected: (value) {
                                       if (value == 'edit') {
-                                        _editerCarte(carte['id'], carte['name'], carte['desc']);
+                                        _editerCarte(carte['id'], carte['name'], carte['desc'], carte['due']);
                                       } else if (value == 'delete') {
                                         _supprimerCarte(liste, cardIndex);
                                       } else if (value == 'manage_members') {
