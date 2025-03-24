@@ -123,7 +123,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
           builder: (context, setStateModal) {
             // Load templates in the background
             _trelloService?.getBoardTemplates().then((loadedTemplates) {
-              if (mounted) {
+              if (mounted && isLoadingTemplates) {
                 setStateModal(() {
                   templates = loadedTemplates;
                   filteredTemplates = [...templates];
@@ -132,7 +132,7 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                 });
               }
             }).catchError((e) {
-              if (mounted) {
+              if (mounted && isLoadingTemplates) {
                 setStateModal(() {
                   isLoadingTemplates = false;
                   print("ERROR LOADING TEMPLATES: $e");

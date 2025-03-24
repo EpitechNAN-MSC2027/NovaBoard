@@ -301,7 +301,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                   }).toList(),
 
                   const Divider(),
-                  const Text("➕ Ajouter un membre"),
                   TextField(
                     controller: emailController,
                     decoration: const InputDecoration(labelText: "Email du membre"),

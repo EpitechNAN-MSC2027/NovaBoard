@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
 import 'detail_carte.dart';
-import 'package:intl/intl.dart';
 
 class ListesScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
@@ -25,6 +26,15 @@ class ListesScreenState extends State<ListesScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
+  Timer? _autoScrollTimer;
+  bool _isAutoScrolling = false;
+  String? _autoScrollDirection;
+  Offset? _lastDragPosition;
+  PageController _pageController = PageController(viewportFraction: 0.97);
+  Map<String, dynamic>? _draggedCard;
+  Map<String, dynamic>? _sourceList;
+  int? _draggedCardIndex;
+
   final TextEditingController _listNameController = TextEditingController();
   final TextEditingController _cardNameController = TextEditingController();
   final TextEditingController _cardDescriptionController = TextEditingController();
@@ -35,6 +45,13 @@ class ListesScreenState extends State<ListesScreen> {
   void initState() {
     super.initState();
     _initTrelloService();
+  }
+
+  @override
+  void dispose() {
+    _cancelAutoScroll();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _initTrelloService() async {
@@ -489,6 +506,142 @@ class ListesScreenState extends State<ListesScreen> {
     );
   }
 
+  void _handleDragUpdate(DragUpdateDetails details, BuildContext context) {
+    _lastDragPosition = details.globalPosition;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final position = details.globalPosition.dx;
+
+    // Define edge sensitivities (10% from each edge)
+    final leftEdge = screenWidth * 0.1;
+    final rightEdge = screenWidth * 0.9;
+
+    if (position < leftEdge) {
+      if (_autoScrollDirection != 'left') {
+        _cancelAutoScroll();
+        print("PAGE:");
+        print(_pageController.page!);
+        if (_pageController.page! > 0) {
+          _startAutoScroll('left', screenWidth);
+        }
+      }
+    } else if (position > rightEdge) {
+      if (_autoScrollDirection != 'right') {
+        _cancelAutoScroll();
+        if (_pageController.page! < _listes.length - 1) {
+          _startAutoScroll('right', screenWidth);
+        }
+      }
+    } else {
+      // If the pointer is in the center, cancel auto-scroll
+      _cancelAutoScroll();
+    }
+  }
+
+  // Start auto-scrolling in the specified direction
+  void _startAutoScroll(String direction, double screenWidth) {
+    print("START AUTO SCROLL");
+    _isAutoScrolling = true;
+    _autoScrollDirection = direction;
+
+    // Calculate thresholds here so they remain constant during auto-scroll
+    final leftEdge = screenWidth * 0.1;
+    final rightEdge = screenWidth * 0.9;
+
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      // Check if the last drag position is in the center area
+      if (_lastDragPosition != null) {
+        if (_lastDragPosition!.dx >= leftEdge && _lastDragPosition!.dx <= rightEdge) {
+          _cancelAutoScroll();
+          return;
+        }
+      }
+
+      // Perform auto-scroll based on direction
+      if (direction == 'left' && _pageController.page! > 0) {
+        _pageController.jumpTo(_pageController.offset - 8); // Adjust as needed
+      } else if (direction == 'right' && _pageController.page! < _listes.length - 1) {
+        _pageController.jumpTo(_pageController.offset + 8);
+      } else {
+        _cancelAutoScroll();
+      }
+    });
+  }
+
+  // Cancel auto-scrolling
+  void _cancelAutoScroll() {
+    print("CANCEL AUTO SCROLL");
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    _isAutoScrolling = false;
+    _autoScrollDirection = null;
+  }
+
+  // Handle dropping a card onto a new list
+  Future<void> _handleCardDrop(Map<String, dynamic> draggedCard, Map<String, dynamic> targetList) async {
+    if (_sourceList == null || _draggedCardIndex == null) return;
+
+    // Don't do anything if dropped on same list
+    if (_sourceList!['id'] == targetList['id']) return;
+
+    // Add the card to target list immediately for visual feedback
+    setState(() {
+      // Add to target list (temporary animated version)
+      if (targetList['cartes'] == null) {
+        targetList['cartes'] = [];
+      }
+
+      targetList['cartes'].add({
+        ...draggedCard,
+        '_isNewlyAdded': true, // Mark as newly added for animation
+      });
+    });
+
+    try {
+      // Update the card to move it to the new list via Trello API
+      await _trelloService!.updateCard(
+        cardId: draggedCard['id'],
+        idList: targetList['id'],
+      );
+
+      setState(() {
+        // Remove from source list
+        _sourceList!['cartes'].removeAt(_draggedCardIndex!);
+
+        // Remove the temporary flag for animation
+        for (var i = 0; i < targetList['cartes'].length; i++) {
+          if (targetList['cartes'][i]['id'] == draggedCard['id']) {
+            targetList['cartes'][i].remove('_isNewlyAdded');
+            break;
+          }
+        }
+      });
+
+      // Show subtle success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Carte déplacée avec succès'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        targetList['cartes'].removeWhere((card) =>
+        card['id'] == draggedCard['id'] && card['_isNewlyAdded'] == true);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du déplacement de la carte: $e')),
+      );
+    } finally {
+      // Reset drag tracking
+      _draggedCard = null;
+      _sourceList = null;
+      _draggedCardIndex = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var tableaux = widget.workspace['tableaux'] ?? [];
@@ -523,148 +676,209 @@ class ListesScreenState extends State<ListesScreen> {
                 icon: const Icon(Icons.add, color: Colors.black),
                  onPressed: _ajouterListe,
                 tooltip: "Ajouter une liste",
-    )
-    ],
-    ),
-            body: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _listes.isEmpty
-                ? const Center(child: Text("Aucune liste disponible"))
-                : PageView.builder(
-              controller: PageController(viewportFraction: 0.97),
-              scrollDirection: Axis.horizontal,
-              itemCount: _listes.length,
-              pageSnapping: true, // Active le snapping automatique
-              itemBuilder: (context, index) {
-                var liste = _listes[index];
+              )
+            ],
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _listes.isEmpty
+                  ? const Center(child: Text("Aucune liste disponible"))
+                  : PageView.builder(
+                    controller: _pageController,
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _listes.length,
+                    pageSnapping: true,
+                    itemBuilder: (context, index) {
+                      var liste = _listes[index];
 
-                print("Liste affichée : $liste");
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: Container(
-                    width: 360,
-                    margin: const EdgeInsets.all(8.0),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withAlpha(150),
-                          spreadRadius: 1,
-                          blurRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          title: Text(
-                            liste['name'] ?? "Sans Nom",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editerListe(index),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
+                        child: Container(
+                          width: 360,
+                          margin: const EdgeInsets.all(8.0),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withAlpha(150),
+                                spreadRadius: 1,
+                                blurRadius: 5,
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _supprimerListe(index),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                  liste['name'] ?? "Sans Nom",
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () => _editerListe(index),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () => _supprimerListe(index),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: DragTarget<Map<String, dynamic>>(
+                                  onWillAccept: (data) {
+                                    return data != null;
+                                  },
+                                  onAccept: (draggedCard) {
+                                    _cancelAutoScroll();
+                                    _handleCardDrop(draggedCard, liste);
+                                  },
+                                  builder: (context, candidateData, rejectedData) {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: candidateData.isNotEmpty
+                                            ? Colors.deepPurple.withOpacity(0.1)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        border: candidateData.isNotEmpty
+                                            ? Border.all(color: Colors.deepPurple, width: 1.0)
+                                            : null,
+                                      ),
+                                      child: ListView.builder(
+                                        itemCount: (liste['cartes'] ?? []).length,
+                                        itemBuilder: (context, cardIndex) {
+                                          final cartes = liste['cartes'] ?? [];
+                                          final carte = cartes.isNotEmpty ? cartes[cardIndex] : null;
+
+                                          if (carte == null) return const SizedBox();
+
+                                          return LongPressDraggable<Map<String, dynamic>>(
+                                            data: carte,
+                                            feedback: Material(
+                                              elevation: 8.0, // Increased for more pronounced shadow
+                                              borderRadius: BorderRadius.circular(8.0),
+                                              child: Container(
+                                                width: 300,
+                                                padding: const EdgeInsets.all(8.0),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  borderRadius: BorderRadius.circular(8.0),
+                                                  border: Border.all(color: Colors.deepPurple, width: 2.0),
+                                                  boxShadow: const [
+                                                    BoxShadow(
+                                                      color: Colors.black26,
+                                                      blurRadius: 10.0,
+                                                      spreadRadius: 1.0,
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: ListTile(
+                                                  title: Text(
+                                                    carte['name'] ?? "Sans titre",
+                                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                                  ),
+                                                  subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
+                                                      ? Text(
+                                                    carte['desc'],
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  )
+                                                      : null,
+                                                ),
+                                              ),
+                                            ),
+                                            childWhenDragging: Opacity(
+                                              opacity: 0.5,
+                                              child: Card(
+                                                child: ListTile(
+                                                  title: Text(carte['name'] ?? "Sans titre"),
+                                                  subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
+                                                  ? Text(
+                                                    carte['desc'],
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ) : null,
+                                                ),
+                                              ),
+                                            ),
+                                            onDragStarted: () {
+                                              print("DRAG STARTED");
+                                              setState(() {
+                                                _draggedCard = carte;
+                                                _sourceList = liste;
+                                                _draggedCardIndex = cardIndex;
+                                              });
+                                            },
+                                            onDragUpdate: (details) {
+                                              print("DRAG UPDATED");
+                                              _handleDragUpdate(details, context);
+                                            },
+                                            onDragEnd: (details) {
+                                              print("DRAG STOPPED");
+                                              _cancelAutoScroll();
+                                              _lastDragPosition = null;
+                                            },
+                                            child: Card(
+                                              child: ListTile(
+                                                title: Text(carte['name'] ?? "Sans titre"),
+                                                subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
+                                                ? Text(
+                                                  carte['desc'],
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ) : null,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                      DetailCarteScreen(carte: carte),
+                                                    ),
+                                                  );
+                                                },
+                                                trailing: PopupMenuButton<String>(
+                                                  onSelected: (value) {
+                                                    if (value == 'edit') {
+                                                      _editerCarte(carte['id'], carte['name'], carte['desc'], carte['due']);
+                                                    } else if (value == 'delete') {
+                                                      _supprimerCarte(liste, cardIndex);
+                                                    } else if (value == 'manage_members') {
+                                                      _gererMembresCarte(carte);
+                                                    }
+                                                  },
+                                                  itemBuilder: (context) => [
+                                                    const PopupMenuItem(value: 'edit', child: Text('✏️ Modifier')),
+                                                    const PopupMenuItem(value: 'delete', child: Text('🗑️ Supprimer')),
+                                                    const PopupMenuItem(value: 'manage_members', child: Text('👥 Assigner des membres')),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () => _ajouterCarte(liste),
+                                icon: const Icon(Icons.add, color: Colors.deepPurple),
+                                label: const Text('Add Card'),
                               ),
                             ],
                           ),
                         ),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: (liste['cartes'] ?? []).length,
-                            itemBuilder: (context, cardIndex) {
-                              final cartes = liste['cartes'] ?? [];
-                              final carte = cartes.isNotEmpty ? cartes[cardIndex] : null;
-
-                              if (carte == null) return const SizedBox();
-
-                              bool isDone = carte['dueComplete'] ?? false;
-
-                              return Card(
-                                color: Colors.deepPurple[50],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  leading: Checkbox(
-                                    value: isDone,
-                                    onChanged: (bool? newValue) async {
-                                      try {
-                                        await _trelloService!.updateCard(
-                                          cardId: carte['id'],
-                                          dueComplete: (newValue ?? false).toString(),
-                                        );
-                                        setState(() {
-                                          carte['dueComplete'] = newValue;
-                                        });
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text("Erreur lors de la mise à jour : $e")),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                  title: Text(carte['name'] ?? "Sans titre"),
-                                  subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
-                                      ? Text(
-                                    carte['desc'],
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                      : null,
-                                  onTap: () async {
-                                    try {
-                                      final updatedCard = await _trelloService!.getCard(carte['id']);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => DetailCarteScreen(carte: updatedCard),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Erreur lors du chargement de la carte : $e')),
-                                      );
-                                    }
-                                  },
-                                  trailing: PopupMenuButton<String>(
-                                    onSelected: (value) {
-                                      if (value == 'edit') {
-                                        _editerCarte(carte['id'], carte['name'], carte['desc'], carte['due']);
-                                      } else if (value == 'delete') {
-                                        _supprimerCarte(liste, cardIndex);
-                                      } else if (value == 'manage_members') {
-                                        _gererMembresCarte(carte);
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(value: 'edit', child: Text('✏️ Modifier')),
-                                      const PopupMenuItem(value: 'delete', child: Text('🗑️ Supprimer')),
-                                      const PopupMenuItem(value: 'manage_members', child: Text('👥 Assigner des membres')),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _ajouterCarte(liste),
-                          icon: const Icon(Icons.add, color: Colors.deepPurple),
-                          label: const Text('Add Card'),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-            ),
-          );
-        },
-    )) ]);
+        )
+      ]
+    );
   }
 }
