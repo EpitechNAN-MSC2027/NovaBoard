@@ -37,7 +37,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    print('Widgets visibles :');
     tester.allWidgets.forEach((widget) => print(widget));
 
     await tester.tap(find.byIcon(Icons.add));
@@ -61,7 +60,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    print('Widgets visibles :');
     tester.allWidgets.forEach((widget) => print(widget));
 
     await tester.tap(find.text('No name').first);
@@ -76,7 +74,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    print('Widgets visibles :');
     tester.allWidgets.forEach((widget) => print(widget));
 
     final menuIcon = find.byIcon(Icons.more_vert).first;

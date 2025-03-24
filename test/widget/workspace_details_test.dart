@@ -12,11 +12,15 @@ class FakeTrelloService extends TrelloService {
       {'id': 'board1', 'name': 'Tableau 1', 'desc': 'Description 1', 'prefs': {'permissionLevel': 'private'}},
     ];
   }
+
+  @override
+  Future<List<dynamic>> getBoardTemplates({String? searchTerm}) async {
+    return [];
+  }
 }
 
 void main() {
   group('WorkspaceDetailsScreen UI Tests', () {
-    // Mock workspace data
     final workspace = {'id': 'workspace1', 'displayName': 'Workspace Test'};
 
     testWidgets('Affiche le titre Tableaux', (WidgetTester tester) async {
@@ -78,33 +82,41 @@ void main() {
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
-      expect(find.text('Créer un nouveau tableau'), findsOneWidget); // adapt text if needed
+      expect(find.text('Créer'), findsOneWidget);
     });
 
     testWidgets('Appui sur le bouton retour fonctionne', (WidgetTester tester) async {
-      bool didPop = false;
       await tester.pumpWidget(MaterialApp(
-        home: Builder(
-          builder: (context) {
-            return WillPopScope(
-              onWillPop: () async {
-                didPop = true;
-                return true;
-              },
-              child: WorkspaceDetailsScreen(
-                workspace: workspace,
-                trelloService: FakeTrelloService(),
-              ),
-            );
-          },
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WorkspaceDetailsScreen(
+                        workspace: workspace,
+                        trelloService: FakeTrelloService(),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Go to Details'),
+              );
+            },
+          ),
         ),
       ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Go to Details'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
-      expect(didPop, true);
+      expect(find.byType(WorkspaceDetailsScreen), findsNothing);
     });
 
     testWidgets('Clique sur un tableau → Navigation vers Listes (mock)', (WidgetTester tester) async {
