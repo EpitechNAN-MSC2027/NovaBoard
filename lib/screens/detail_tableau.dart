@@ -10,14 +10,23 @@ class DetailTableauScreen extends StatefulWidget {
 }
 
 class DetailTableauScreenState extends State<DetailTableauScreen> {
-  late List<Map<String, dynamic>> _taches;
+  late List<Map<String, dynamic>> _listes;
 
   @override
   void initState() {
     super.initState();
-    _taches = widget.tableau['taches']
-        .map<Map<String, dynamic>>((tache) => {'nom': tache, 'fait': false})
-        .toList();
+    _listes = (widget.tableau['listes'] ?? []).map<Map<String, dynamic>>((liste) {
+      if (liste is String) {
+        return {'nom': liste, 'cartes': []};
+      } else if (liste is Map<String, dynamic>) {
+        return {
+          'nom': liste['nom'] ?? 'Liste sans nom',
+          'cartes': liste['cartes'] ?? []
+        };
+      } else {
+        return {'nom': 'Liste inconnue', 'cartes': []};
+      }
+    }).toList();
   }
 
   @override
@@ -33,15 +42,13 @@ class DetailTableauScreenState extends State<DetailTableauScreen> {
           children: [
             Expanded(
               child: ListView.builder(
-                itemCount: _taches.length,
+                itemCount: _listes.length,
                 itemBuilder: (context, index) {
-                  return CheckboxListTile(
-                    title: Text(_taches[index]['nom']),
-                    value: _taches[index]['fait'],
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _taches[index]['fait'] = value ?? false;
-                      });
+                  return ListTile(
+                    title: Text(_listes[index]['nom']),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple),
+                    onTap: () {
+                      // Ici, on pourra ouvrir les cartes de la liste
                     },
                   );
                 },

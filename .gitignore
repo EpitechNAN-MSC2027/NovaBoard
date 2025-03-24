@@ -47,4 +47,9 @@ app.*.map.json
 *.env
 
 demo_main.dart
+trello_test_screen_old.dart
 trello_test_screen.dart
+test_workspaces.dart
+test_boards.dart
+test_boards_content.dart
+
