@@ -64,7 +64,7 @@ class TrelloService {
   }
 
   Future<List<dynamic>> getMembersForWorkspace(String workspaceId) async {
-    final url = "https://api.trello.com/1/organizations/$workspaceId/members?key=$apiKey&token=$token";
+    final url = _buildUrl('organizations/$workspaceId/members');
 
     try {
       final response = await _client.get(Uri.parse(url));
@@ -630,5 +630,11 @@ class TrelloService {
       throw Exception('Failed to load notifications: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> searchTrello({String? searchTerm}) async {
+    final url = _buildUrl('search', {
+      if (searchTerm != null) 'query': searchTerm,
+    });
+    final response = await http.get(url);
 
 }
