@@ -67,7 +67,7 @@ class TrelloService {
     final url = _buildUrl('organizations/$workspaceId/members');
 
     try {
-      final response = await _client.get(Uri.parse(url));
+      final response = await _client.get(Uri.parse(url as String));
 
       if (response.statusCode == 200) {
         final List<dynamic> members = jsonDecode(response.body);
@@ -635,6 +635,12 @@ class TrelloService {
     final url = _buildUrl('search', {
       if (searchTerm != null) 'query': searchTerm,
     });
-    final response = await http.get(url);
+    final response = await _client.get(url);
 
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to search Trello: ${response.body}');
+    }
+  }
 }

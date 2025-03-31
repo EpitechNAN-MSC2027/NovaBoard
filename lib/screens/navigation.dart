@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
 import 'workspaces.dart';
-import 'search_screen.dart';
+import 'search.dart';
 import 'notifications.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();

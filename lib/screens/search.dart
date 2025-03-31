@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
+import 'detail_carte.dart';
 import 'workspace_details.dart';
 import 'listes.dart';
 
@@ -15,7 +16,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreen extends State<SearchScreen> {
   TrelloService? _trelloService;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
   String _errorMessage = '';
@@ -63,6 +64,15 @@ class _SearchScreen extends State<SearchScreen> {
       return;
     }
 
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _errorMessage = '';
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -93,7 +103,10 @@ class _SearchScreen extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text('Trello Search'),
         actions: [
           PopupMenuButton<String>(
@@ -172,10 +185,8 @@ class _SearchScreen extends State<SearchScreen> {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              onSubmitted: (value) {
-                if (value.isNotEmpty) {
-                  _performSearch(value);
-                }
+              onChanged: (value) {
+                _performSearch(value);
               },
             ),
           ),
@@ -183,7 +194,7 @@ class _SearchScreen extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage.isNotEmpty
-                ? Center(child: Text(_errorMessage, style: TextStyle(color: Colors.red)))
+                ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)))
                 : _searchResults.isEmpty
                 ? const Center(child: Text('No results found'))
                 : _buildSearchResults(),
@@ -250,36 +261,30 @@ class _SearchScreen extends State<SearchScreen> {
           title: Text(title),
           subtitle: Text(subtitle),
           onTap: () {
-            if (result.containsKey('idBoard')) {
-              // This is likely a board
-              /*Navigator.push(
+            if (result.containsKey('idBoard') && result.containsKey('idList')) {
+              // It's a card
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ListesScreen(
-                    workspace: workspace,
-                    tableau: result,
-                  ),
+                  builder: (context) => DetailCarteScreen(carte: result),
                 ),
-              );*/
-            } else if (result.containsKey('idList')) {
-              // This is likely a card
-              /*Navigator.push(
+              );
+            } else if (result.containsKey('idOrganization')) {
+              // It's a board
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CardDetailsScreen(card: result),
+                  builder: (context) => ListesScreen(tableau: result, workspace: {},),
                 ),
-              );*/
-            } else if (result.containsKey('id')) {
-              // This is likely a workspace
-              /*Navigator.push(
+              );
+            } else if (result.containsKey('displayName') && result.containsKey('id')) {
+              // It's a workspace
+              Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => WorkspaceDetailsScreen(workspace: result),
                 ),
-              ).then((_) {
-                // When navigating back, set the selected index to the WorkspacesScreen
-                navigationKey.currentState?.setSelectedIndex(0);
-              });*/
+              );
             }
           },
         );
