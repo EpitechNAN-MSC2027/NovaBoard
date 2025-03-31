@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'package:http/http.dart' as http;
 
 class TrelloService {
@@ -23,7 +24,7 @@ class TrelloService {
   }
 
   Future<Map<String, dynamic>> addMemberToWorkspace(String workspaceId, String email) async {
-    final url = 'https://api.trello.com/1/organizations/$workspaceId/members';
+    final url = _buildUrl('organizations/$workspaceId/members');
     final response = await http.put(
       Uri.parse('$url?email=$email&key=$apiKey&token=$token'),
     );
@@ -36,7 +37,7 @@ class TrelloService {
   }
 
   Future<void> removeMemberFromWorkspace(String workspaceId, String memberId) async {
-    final url = 'https://api.trello.com/1/organizations/$workspaceId/members/$memberId';
+    final url = _buildUrl('organizations/$workspaceId/members/$memberId');
     final response = await http.delete(
       Uri.parse('$url?key=$apiKey&token=$token'),
     );
@@ -47,10 +48,10 @@ class TrelloService {
   }
 
   Future<List<dynamic>> getMembersForWorkspace(String workspaceId) async {
-    final url = "https://api.trello.com/1/organizations/$workspaceId/members?key=$apiKey&token=$token";
+    final url = _buildUrl('organizations/$workspaceId/members');
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> members = jsonDecode(response.body);
@@ -613,5 +614,17 @@ class TrelloService {
       throw Exception('Failed to load notifications: ${response.body}');
     }
   }
+  
+  Future<Map<String, dynamic>> searchTrello({String? searchTerm}) async {
+    final url = _buildUrl('search', {
+      if (searchTerm != null) 'query': searchTerm,
+    });
+    final response = await http.get(url);
 
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load search results: ${response.body}');
+    }
+  }
 }

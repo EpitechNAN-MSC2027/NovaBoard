@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
 import 'workspaces.dart';
+import 'search_screen.dart';
 import 'notifications.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
@@ -24,7 +25,7 @@ class NavigationScreenState extends State<NavigationScreen> {
     super.initState();
     _pages.addAll([
           () => const WorkspacesScreen(),
-          () => const Center(child: Text('Recherche')),
+          () => const SearchScreen(),
           () => const NotificationsScreen(),
           () => const SizedBox.shrink(),
     ]);
