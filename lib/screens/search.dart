@@ -107,7 +107,6 @@ class _SearchScreen extends State<SearchScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Trello Search'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -262,29 +261,28 @@ class _SearchScreen extends State<SearchScreen> {
           subtitle: Text(subtitle),
           onTap: () {
             if (result.containsKey('idBoard') && result.containsKey('idList')) {
-              // It's a card
-              Navigator.push(
-                context,
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => DetailCarteScreen(carte: result),
                 ),
               );
-            } else if (result.containsKey('idOrganization')) {
-              // It's a board
-              Navigator.push(
-                context,
+              return;
+            }
+            if (result.containsKey('idOrganization')) {
+              Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => ListesScreen(tableau: result, workspace: {},),
+                  builder: (context) => ListesScreen(tableau: result, workspace: {}),
                 ),
               );
-            } else if (result.containsKey('displayName') && result.containsKey('id')) {
-              // It's a workspace
-              Navigator.push(
-                context,
+              return;
+            }
+            if (result.containsKey('displayName') && result.containsKey('id')) {
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => WorkspaceDetailsScreen(workspace: result),
                 ),
               );
+              return;
             }
           },
         );
