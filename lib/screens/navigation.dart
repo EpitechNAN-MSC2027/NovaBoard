@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
-import '../services/trello_service.dart';
 import 'workspaces.dart';
-import 'search.dart';
 import 'notifications.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
 
 class NavigationScreen extends StatefulWidget {
-  final TrelloService? trelloService;
-  NavigationScreen({Key? key, this.trelloService}) : super(key: navigationKey);
+  NavigationScreen({Key? key}) : super(key: navigationKey);
 
   @override
   NavigationScreenState createState() => NavigationScreenState();
 }
 
 class NavigationScreenState extends State<NavigationScreen> {
-  TrelloService? _trelloService;
-  bool _hasUnreadNotifications = false;
+  final TrelloAuthService _authService = TrelloAuthService();
 
   int _selectedIndex = 0;
 
@@ -26,28 +22,12 @@ class NavigationScreenState extends State<NavigationScreen> {
   @override
   void initState() {
     super.initState();
-    _initTrelloService().then((_) => _checkUnreadNotifications());
     _pages.addAll([
           () => const WorkspacesScreen(),
-          () => const SearchScreen(),
+          () => const Center(child: Text('Recherche')),
           () => const NotificationsScreen(),
           () => const SizedBox.shrink(),
     ]);
-  }
-
-  Future<void> _initTrelloService() async {
-    if (widget.trelloService != null) {
-      _trelloService = widget.trelloService!;
-      return;
-    }
-    final authService = TrelloAuthService();
-    final token = await authService.getStoredAccessToken() ?? '';
-    if (token.isNotEmpty) {
-      _trelloService = TrelloService(
-        apiKey: const String.fromEnvironment('TRELLO_API_KEY'),
-        token: token,
-      );
-    }
   }
 
   Future<void> logout() async {
@@ -57,20 +37,9 @@ class NavigationScreenState extends State<NavigationScreen> {
     });
   }
 
-  Future<void> _checkUnreadNotifications() async {
-    if (_trelloService == null) return;
-    final unread = await _trelloService!.hasUnreadNotifications();
-    setState(() {
-      _hasUnreadNotifications = unread;
-    });
-  }
-
   void setSelectedIndex(int index) {
     setState(() {
       _selectedIndex = index;
-      if (index == 2) {
-        _hasUnreadNotifications = false;
-      }
     });
   }
 
@@ -131,7 +100,8 @@ class NavigationScreenState extends State<NavigationScreen> {
                             await logout();
                           },
                           child: const Text('Déconnexion'),
-    )],
+    ),
+                      ],
                     );
                   },
                 );
@@ -143,33 +113,20 @@ class NavigationScreenState extends State<NavigationScreen> {
             selectedItemColor: Colors.deepPurple,
             unselectedItemColor: Colors.black54,
             backgroundColor: Colors.white,
-            items: [
-              const BottomNavigationBarItem(
+            items: const [
+              BottomNavigationBarItem(
                 icon: Icon(Icons.business),
                 label: 'Workspaces',
               ),
-              const BottomNavigationBarItem(
+              BottomNavigationBarItem(
                 icon: Icon(Icons.search),
                 label: 'Recherche',
               ),
               BottomNavigationBarItem(
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.notifications),
-                    if (_hasUnreadNotifications)
-                      const Positioned(
-                        right: 0,
-                        top: 0,
-                        child: CircleAvatar(
-                          radius: 4,
-                          backgroundColor: Colors.red,
-                        ),
-                      ),
-                  ],
-                ),
+                icon: Icon(Icons.notifications),
                 label: 'Notifications',
               ),
-              const BottomNavigationBarItem(
+              BottomNavigationBarItem(
                 icon: Icon(Icons.logout),
                 label: 'Déconnexion',
               ),

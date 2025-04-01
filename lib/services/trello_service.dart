@@ -7,11 +7,7 @@ class TrelloService {
   final String baseUrl = 'https://api.trello.com/1/';
 
   TrelloService({required this.apiKey, required this.token});
-  http.Client _client = http.Client();
 
-  set client(http.Client client) {
-    _client = client;
-  }
   /// Builds a URL with the necessary authentication query parameters.
   Uri _buildUrl(String path, [Map<String, String>? params]) {
     final queryParameters = {
@@ -28,7 +24,7 @@ class TrelloService {
 
   Future<Map<String, dynamic>> addMemberToWorkspace(String workspaceId, String email) async {
     final url = 'https://api.trello.com/1/organizations/$workspaceId/members';
-    final response = await _client.put(
+    final response = await http.put(
       Uri.parse('$url?email=$email&key=$apiKey&token=$token'),
     );
 
@@ -37,24 +33,11 @@ class TrelloService {
     } else {
       throw Exception('Erreur lors de l\'ajout du membre : ${response.body}');
     }
-
-}
-
-  Future<bool> hasUnreadNotifications() async {
-    final url = _buildUrl('members/me/notifications');
-    final response = await _client.get(url);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> notifications = jsonDecode(response.body);
-      return notifications.any((notif) => notif['unread'] == true);
-    } else {
-      throw Exception('Failed to check notifications: ${response.body}');
-    }
   }
 
   Future<void> removeMemberFromWorkspace(String workspaceId, String memberId) async {
     final url = 'https://api.trello.com/1/organizations/$workspaceId/members/$memberId';
-    final response = await _client.delete(
+    final response = await http.delete(
       Uri.parse('$url?key=$apiKey&token=$token'),
     );
 
@@ -64,10 +47,10 @@ class TrelloService {
   }
 
   Future<List<dynamic>> getMembersForWorkspace(String workspaceId) async {
-    final url = _buildUrl('organizations/$workspaceId/members');
+    final url = "https://api.trello.com/1/organizations/$workspaceId/members?key=$apiKey&token=$token";
 
     try {
-      final response = await _client.get(Uri.parse(url as String));
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final List<dynamic> members = jsonDecode(response.body);
@@ -84,7 +67,7 @@ class TrelloService {
 
   Future<void> addMemberToCard(String cardId, String memberId) async {
     final url = _buildUrl('cards/$cardId/idMembers', {'value': memberId});
-    final response = await _client.post(url);
+    final response = await http.post(url);
     if (response.statusCode != 200) {
       throw Exception('Erreur lors de l\'ajout du membre : ${response.body}');
     }
@@ -92,7 +75,7 @@ class TrelloService {
 
   Future<void> removeMemberFromCard(String cardId, String memberId) async {
     final url = _buildUrl('cards/$cardId/idMembers/$memberId');
-    final response = await _client.delete(url);
+    final response = await http.delete(url);
 
     if (response.statusCode != 200) {
       throw Exception('Erreur lors de la suppression du membre : ${response.body}');
@@ -108,7 +91,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('boards/$boardId');
-    final response = await _client.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode != 200) {
       throw Exception('Failed to update board visibility: ${response.body}');
@@ -120,7 +103,7 @@ class TrelloService {
   /// Get all workspaces for the current member
   Future<List<dynamic>> getWorkspaces() async {
     final url = _buildUrl('members/me/organizations');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -132,7 +115,7 @@ class TrelloService {
   /// Get a specific workspace by ID
   Future<Map<String, dynamic>> getWorkspace(String workspaceId) async {
     final url = _buildUrl('organizations/$workspaceId');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -156,7 +139,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('organizations');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -181,7 +164,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('organizations/$workspaceId');
-    final response = await _client.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -193,7 +176,7 @@ class TrelloService {
   /// Delete a workspace
   Future<bool> deleteWorkspace(String workspaceId) async {
     final url = _buildUrl('organizations/$workspaceId');
-    final response = await _client.delete(url);
+    final response = await http.delete(url);
 
     if (response.statusCode == 200) {
       return true;
@@ -207,7 +190,7 @@ class TrelloService {
   /// Get all boards for the current member
   Future<List<dynamic>> getBoards() async {
     final url = _buildUrl('members/me/boards');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -219,7 +202,7 @@ class TrelloService {
   /// Get boards for a specific workspace
   Future<List<dynamic>> getBoardsForWorkspace(String workspaceId) async {
     final url = _buildUrl('organizations/$workspaceId/boards');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -231,7 +214,7 @@ class TrelloService {
   /// Get a specific board by ID
   Future<Map<String, dynamic>> getBoard(String boardId) async {
     final url = _buildUrl('boards/$boardId');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -248,7 +231,7 @@ class TrelloService {
       if (searchTerm != null && searchTerm.isNotEmpty) 'search': searchTerm,
     });
 
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -277,7 +260,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('boards');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -301,7 +284,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('boards');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -328,7 +311,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('boards/$boardId');
-    final response = await _client.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -341,7 +324,7 @@ class TrelloService {
   Future<bool> deleteBoard(String boardId) async {
     // In Trello, boards are "closed" rather than deleted
     final url = _buildUrl('boards/$boardId', {'closed': 'true'});
-    final response = await _client.delete(url);
+    final response = await http.delete(url);
 
     if (response.statusCode == 200) {
       return true;
@@ -356,7 +339,7 @@ class TrelloService {
   Future<List<dynamic>> getListsForBoard(String boardId, {bool includeArchived = false}) async {
     final Map<String, String> params = includeArchived ? {} : {'filter': 'open'};
     final url = _buildUrl('boards/$boardId/lists', params);
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -368,7 +351,7 @@ class TrelloService {
   /// Get a specific list by ID
   Future<Map<String, dynamic>> getList(String listId) async {
     final url = _buildUrl('lists/$listId');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -390,7 +373,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('lists');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -415,7 +398,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('lists/$listId');
-    final response = await _client.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -427,7 +410,7 @@ class TrelloService {
   /// Archive a list (Trello doesn't allow permanent deletion of lists)
   Future<bool> archiveList(String listId) async {
     final url = _buildUrl('lists/$listId/closed', {'value': 'true'});
-    final response = await _client.put(url);
+    final response = await http.put(url);
 
     if (response.statusCode == 200) {
       return true;
@@ -441,7 +424,7 @@ class TrelloService {
   /// Get all cards on a list
   Future<List<dynamic>> getCardsForList(String listId) async {
     final url = _buildUrl('lists/$listId/cards');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -453,7 +436,7 @@ class TrelloService {
   /// Get all cards on a board
   Future<List<dynamic>> getCardsForBoard(String boardId) async {
     final url = _buildUrl('boards/$boardId/cards');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -465,7 +448,7 @@ class TrelloService {
   /// Get a specific card by ID
   Future<Map<String, dynamic>> getCard(String cardId) async {
     final url = _buildUrl('cards/$cardId');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -513,7 +496,7 @@ class TrelloService {
     }
 
     final url = _buildUrl('cards');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -548,7 +531,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('cards/$cardId');
-    final response = await _client.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.put(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -560,7 +543,7 @@ class TrelloService {
   /// Delete a card
   Future<bool> deleteCard(String cardId) async {
     final url = _buildUrl('cards/$cardId');
-    final response = await _client.delete(url);
+    final response = await http.delete(url);
 
     if (response.statusCode == 200) {
       return true;
@@ -577,7 +560,7 @@ class TrelloService {
     required String text,
   }) async {
     final url = _buildUrl('cards/$cardId/actions/comments', {'text': text});
-    final response = await _client.post(url);
+    final response = await http.post(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -589,7 +572,7 @@ class TrelloService {
   /// Get labels for a board
   Future<List<dynamic>> getLabelsForBoard(String boardId) async {
     final url = _buildUrl('boards/$boardId/labels');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -611,7 +594,7 @@ class TrelloService {
     };
 
     final url = _buildUrl('labels');
-    final response = await _client.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
+    final response = await http.post(url.replace(queryParameters: {...url.queryParameters, ...params}));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -622,7 +605,7 @@ class TrelloService {
 
   Future<List<dynamic>> getNotifications() async {
     final url = _buildUrl('members/me/notifications');
-    final response = await _client.get(url);
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -631,52 +614,4 @@ class TrelloService {
     }
   }
 
-  Future<Map<String, dynamic>> searchTrello({String? searchTerm}) async {
-    final url = _buildUrl('search', {
-      if (searchTerm != null) 'query': searchTerm,
-    });
-    final response = await _client.get(url);
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to search Trello: ${response.body}');
-    }
-  }
-
-  Future<Map<String, dynamic>> getListDetails(String listId) async {
-    final url = _buildUrl('lists/$listId');
-    final response = await _client.get(url);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load list details');
-    }
-  }
-
-  Future<Map<String, dynamic>> getBoardDetails(String boardId) async {
-    final url = _buildUrl('boards/$boardId', {
-      'fields': 'name,idOrganization',
-    });
-
-    print('Fetching board from: $url'); // For debugging
-
-    final response = await _client.get(url);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load board details');
-    }
-  }
-
-  Future<Map<String, dynamic>> getWorkspaceDetails(String workspaceId) async {
-    final url = Uri.parse('https://api.trello.com/1/organizations/$workspaceId?key=$apiKey&token=$token');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load workspace details');
-    }
-  }
 }
