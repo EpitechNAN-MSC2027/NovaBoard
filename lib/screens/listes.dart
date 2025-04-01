@@ -6,6 +6,14 @@ import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
 import 'detail_carte.dart';
 
+class DragContext {
+  final Map<String, dynamic> card;
+  final Map<String, dynamic> sourceList;
+  final int cardIndex;
+
+  DragContext({required this.card, required this.sourceList, required this.cardIndex});
+}
+
 class ListesScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
   final Map<String, dynamic> tableau;
@@ -31,9 +39,8 @@ class ListesScreenState extends State<ListesScreen> {
   String? _autoScrollDirection;
   Offset? _lastDragPosition;
   PageController _pageController = PageController(viewportFraction: 0.97);
-  Map<String, dynamic>? _draggedCard;
-  Map<String, dynamic>? _sourceList;
-  int? _draggedCardIndex;
+  DragContext? _dragContext;
+  bool _isDragging = false;
 
   final TextEditingController _listNameController = TextEditingController();
   final TextEditingController _cardNameController = TextEditingController();
@@ -506,61 +513,44 @@ class ListesScreenState extends State<ListesScreen> {
     );
   }
 
-  void _handleDragUpdate(DragUpdateDetails details, BuildContext context) {
-    _lastDragPosition = details.globalPosition;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final position = details.globalPosition.dx;
-
-    // Define edge sensitivities (10% from each edge)
-    final leftEdge = screenWidth * 0.1;
-    final rightEdge = screenWidth * 0.9;
-
-    if (position < leftEdge) {
-      if (_autoScrollDirection != 'left') {
-        _cancelAutoScroll();
-        print("PAGE:");
-        print(_pageController.page!);
-        if (_pageController.page! > 0) {
-          _startAutoScroll('left', screenWidth);
-        }
-      }
-    } else if (position > rightEdge) {
-      if (_autoScrollDirection != 'right') {
-        _cancelAutoScroll();
-        if (_pageController.page! < _listes.length - 1) {
-          _startAutoScroll('right', screenWidth);
-        }
-      }
-    } else {
-      // If the pointer is in the center, cancel auto-scroll
-      _cancelAutoScroll();
-    }
-  }
-
   // Start auto-scrolling in the specified direction
   void _startAutoScroll(String direction, double screenWidth) {
-    print("START AUTO SCROLL");
+    const scrollSpeed = 8.0; // Extraire en constante
+
     _isAutoScrolling = true;
     _autoScrollDirection = direction;
 
-    // Calculate thresholds here so they remain constant during auto-scroll
-    final leftEdge = screenWidth * 0.1;
-    final rightEdge = screenWidth * 0.9;
-
     _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      // Check if the last drag position is in the center area
-      if (_lastDragPosition != null) {
-        if (_lastDragPosition!.dx >= leftEdge && _lastDragPosition!.dx <= rightEdge) {
+      if (!_isDragging) {
+        _cancelAutoScroll();
+        return;
+      }
+
+      final leftEdge = screenWidth * 0.1;
+      final rightEdge = screenWidth * 0.9;
+
+      final RenderObject? renderObject = context.findRenderObject();
+      if (renderObject != null && renderObject is RenderBox) {
+        // Convertir les coordonnées de l'écran en coordonnées locales
+        final localPosition = renderObject.globalToLocal(_lastDragPosition!);
+
+        // Vérifier si la position du doigt est sortie de la zone de défilement
+        if (localPosition.dx >= leftEdge && localPosition.dx <= rightEdge) {
           _cancelAutoScroll();
           return;
         }
       }
 
-      // Perform auto-scroll based on direction
+      // Arrêter le défilement si on n'est plus près du bord
+      if (_lastDragPosition!.dx >= leftEdge && _lastDragPosition!.dx <= rightEdge) {
+        _cancelAutoScroll();
+        return;
+      }
+
       if (direction == 'left' && _pageController.page! > 0) {
-        _pageController.jumpTo(_pageController.offset - 8); // Adjust as needed
+        _pageController.jumpTo(_pageController.offset - scrollSpeed);
       } else if (direction == 'right' && _pageController.page! < _listes.length - 1) {
-        _pageController.jumpTo(_pageController.offset + 8);
+        _pageController.jumpTo(_pageController.offset + scrollSpeed);
       } else {
         _cancelAutoScroll();
       }
@@ -578,36 +568,35 @@ class ListesScreenState extends State<ListesScreen> {
 
   // Handle dropping a card onto a new list
   Future<void> _handleCardDrop(Map<String, dynamic> draggedCard, Map<String, dynamic> targetList) async {
-    if (_sourceList == null || _draggedCardIndex == null) return;
+    if (_dragContext == null) return;
 
-    // Don't do anything if dropped on same list
-    if (_sourceList!['id'] == targetList['id']) return;
+    // Ne rien faire si déposé sur la même liste
+    if (_dragContext!.sourceList['id'] == targetList['id']) return;
 
-    // Add the card to target list immediately for visual feedback
+    // Ajouter la carte à la liste cible immédiatement pour le feedback visuel
     setState(() {
-      // Add to target list (temporary animated version)
       if (targetList['cartes'] == null) {
         targetList['cartes'] = [];
       }
 
       targetList['cartes'].add({
         ...draggedCard,
-        '_isNewlyAdded': true, // Mark as newly added for animation
+        '_isNewlyAdded': true, // Marquer comme nouvellement ajoutée pour l'animation
       });
     });
 
     try {
-      // Update the card to move it to the new list via Trello API
+      // Mettre à jour la carte pour la déplacer vers la nouvelle liste via l'API Trello
       await _trelloService!.updateCard(
         cardId: draggedCard['id'],
         idList: targetList['id'],
       );
 
       setState(() {
-        // Remove from source list
-        _sourceList!['cartes'].removeAt(_draggedCardIndex!);
+        // Supprimer de la liste source
+        _dragContext!.sourceList['cartes'].removeAt(_dragContext!.cardIndex);
 
-        // Remove the temporary flag for animation
+        // Supprimer le flag temporaire pour l'animation
         for (var i = 0; i < targetList['cartes'].length; i++) {
           if (targetList['cartes'][i]['id'] == draggedCard['id']) {
             targetList['cartes'][i].remove('_isNewlyAdded');
@@ -616,30 +605,30 @@ class ListesScreenState extends State<ListesScreen> {
         }
       });
 
-      // Show subtle success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Carte déplacée avec succès'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 1),
-        ),
-      );
+      _showFeedback('Carte déplacée avec succès', isError: false);
     } catch (e) {
+      // Annuler les changements visuels en cas d'erreur
       setState(() {
         targetList['cartes'].removeWhere((card) =>
         card['id'] == draggedCard['id'] && card['_isNewlyAdded'] == true);
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du déplacement de la carte: $e')),
-      );
+      _showFeedback('Erreur lors du déplacement de la carte: $e', isError: true);
     } finally {
-      // Reset drag tracking
-      _draggedCard = null;
-      _sourceList = null;
-      _draggedCardIndex = null;
+      // Réinitialiser le suivi du glissement
+      _dragContext = null;
     }
+  }
+
+  void _showFeedback(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: isError ? 3 : 1),
+      ),
+    );
   }
 
   @override
@@ -826,19 +815,22 @@ class ListesScreenState extends State<ListesScreen> {
                                               ),
                                             ),
                                             onDragStarted: () {
-                                              print("DRAG STARTED");
                                               setState(() {
-                                                _draggedCard = carte;
-                                                _sourceList = liste;
-                                                _draggedCardIndex = cardIndex;
+                                                _isDragging = true;
+                                                _dragContext = DragContext(
+                                                    card: carte,
+                                                    sourceList: liste,
+                                                    cardIndex: cardIndex
+                                                );
                                               });
                                             },
                                             onDragUpdate: (details) {
-                                              print("DRAG UPDATED");
-                                              _handleDragUpdate(details, context);
+                                              // Assurez-vous que cette méthode est bien appelée avec des logs
+                                              print("DRAG UPDATE: ${details.globalPosition}");
+                                              _lastDragPosition = details.globalPosition; // Mettre à jour directement ici
                                             },
                                             onDragEnd: (details) {
-                                              print("DRAG STOPPED");
+                                              _isDragging = false; // Important: marquer la fin du glissement
                                               _cancelAutoScroll();
                                               _lastDragPosition = null;
                                             },
@@ -915,7 +907,39 @@ class ListesScreenState extends State<ListesScreen> {
                       );
                     },
                   ),
-        )
+        ),
+        Positioned.fill(
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerMove: (PointerMoveEvent event) {
+              if (_isDragging) {
+                print("POINTER MOVE: ${event.position}");
+                _lastDragPosition = event.position;
+
+                // Appliquer la même logique que _handleDragUpdate
+                final screenWidth = MediaQuery.of(context).size.width;
+                final position = event.position.dx;
+                final leftEdge = screenWidth * 0.1;
+                final rightEdge = screenWidth * 0.9;
+
+                if (position < leftEdge) {
+                  if (_autoScrollDirection != 'left' && _pageController.page! > 0) {
+                    _cancelAutoScroll();
+                    _startAutoScroll('left', screenWidth);
+                  }
+                } else if (position > rightEdge) {
+                  if (_autoScrollDirection != 'right' && _pageController.page! < _listes.length - 1) {
+                    _cancelAutoScroll();
+                    _startAutoScroll('right', screenWidth);
+                  }
+                } else {
+                  _cancelAutoScroll();
+                }
+              }
+            },
+            child: Container(), // Widget transparent
+          ),
+        ),
       ]
     );
   }
