@@ -796,6 +796,25 @@ class ListesScreenState extends State<ListesScreen> {
                                               opacity: 0.5,
                                               child: Card(
                                                 child: ListTile(
+                                                  leading: Checkbox(
+                                                    value: carte['dueComplete'] == true,
+                                                    onChanged: (bool? value) async {
+                                                      final updated = {...carte, 'dueComplete': value};
+                                                      try {
+                                                        await _trelloService!.updateCard(
+                                                          cardId: carte['id'],
+                                                          dueComplete: value.toString(),
+                                                        );
+                                                        setState(() {
+                                                          carte['dueComplete'] = value;
+                                                        });
+                                                      } catch (e) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(content: Text('Erreur lors de la mise à jour du statut: $e')),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
                                                   title: Text(carte['name'] ?? "Sans titre"),
                                                   subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
                                                   ? Text(
@@ -824,8 +843,27 @@ class ListesScreenState extends State<ListesScreen> {
                                               _lastDragPosition = null;
                                             },
                                             child: Card(
-                                              child: ListTile(
-                                                title: Text(carte['name'] ?? "Sans titre"),
+                                                child: ListTile(
+                                                  leading: Checkbox(
+                                                    value: carte['dueComplete'] == true,
+                                                    onChanged: (bool? value) async {
+                                                      final updated = {...carte, 'dueComplete': value};
+                                                      try {
+                                                        await _trelloService!.updateCard(
+                                                          cardId: carte['id'],
+                                                          dueComplete: value.toString(),
+                                                        );
+                                                        setState(() {
+                                                          carte['dueComplete'] = value;
+                                                        });
+                                                      } catch (e) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(content: Text('Erreur lors de la mise à jour du statut: $e')),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
+                                                  title: Text(carte['name'] ?? "Sans titre"),
                                                 subtitle: carte['desc'] != null && carte['desc'].toString().isNotEmpty
                                                 ? Text(
                                                   carte['desc'],

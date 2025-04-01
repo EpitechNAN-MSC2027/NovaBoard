@@ -7,10 +7,10 @@ class DetailCarteScreen extends StatefulWidget {
   const DetailCarteScreen({Key? key, required this.carte}) : super(key: key);
 
   @override
-  _DetailCarteScreenState createState() => _DetailCarteScreenState();
+  DetailCarteScreenState createState() => DetailCarteScreenState();
 }
 
-class _DetailCarteScreenState extends State<DetailCarteScreen> {
+class DetailCarteScreenState extends State<DetailCarteScreen> {
   Map<String, dynamic>? _updatedCarte;
   String? _errorMessage;
 
