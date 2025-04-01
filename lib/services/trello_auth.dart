@@ -12,14 +12,8 @@ class TrelloAuthService {
   final String apiKey = dotenv.env['TRELLO_API_KEY'] ?? '';
   final String apiSecret = dotenv.env['TRELLO_API_SECRET'] ?? '';
   final String callbackUrlScheme = 'novaboard';
-  final FlutterSecureStorage storage;
-  final LocalAuthentication auth;
-
-  TrelloAuthService({
-    FlutterSecureStorage? storage,
-    LocalAuthentication? auth,
-  })  : storage = storage ?? const FlutterSecureStorage(),
-        auth = auth ?? LocalAuthentication();
+  final storage = FlutterSecureStorage();
+  final LocalAuthentication auth = LocalAuthentication();
 
   /// Authenticate with Trello OAuth
   Future<void> authenticateWithTrello() async {
@@ -56,7 +50,7 @@ class TrelloAuthService {
   /// Get OAuth request token
   Future<String> _getRequestToken() async {
     final url = 'https://trello.com/1/OAuthGetRequestToken';
-    final oauthNonce = generateNonce();
+    final oauthNonce = _generateNonce();
     final oauthTimestamp =
     (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
 
@@ -71,8 +65,8 @@ class TrelloAuthService {
 
     print('params: $params');
 
-    final signature = generateSignature('POST', url, params, apiSecret, '');
-    final authHeader = buildAuthHeader(params, signature);
+    final signature = _generateSignature('POST', url, params, apiSecret, '');
+    final authHeader = _buildAuthHeader(params, signature);
 
     final response = await http.post(
       Uri.parse(url),
@@ -101,7 +95,7 @@ class TrelloAuthService {
   Future<String> _getAccessToken(
       String oauthToken, String? oauthVerifier) async {
     final url = 'https://trello.com/1/OAuthGetAccessToken';
-    final oauthNonce = generateNonce();
+    final oauthNonce = _generateNonce();
     final oauthTimestamp =
     (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
 
@@ -121,8 +115,8 @@ class TrelloAuthService {
       'oauth_verifier': oauthVerifier!,
     };
 
-    final signature = generateSignature('POST', url, params, apiSecret, oauthTokenSecret);
-    final authHeader = buildAuthHeader(params, signature);
+    final signature = _generateSignature('POST', url, params, apiSecret, oauthTokenSecret);
+    final authHeader = _buildAuthHeader(params, signature);
 
     final response = await http.post(
       Uri.parse(url),
@@ -182,7 +176,7 @@ class TrelloAuthService {
   }
 
   /// Helper: Generate OAuth nonce
-  String generateNonce() {
+  String _generateNonce() {
     final random = Random();
     return List.generate(32, (_) => random.nextInt(256))
         .map((e) => e.toRadixString(16).padLeft(2, '0'))
@@ -190,7 +184,7 @@ class TrelloAuthService {
   }
 
   /// Helper: Generate OAuth signature
-  String generateSignature(String method, String url,
+  String _generateSignature(String method, String url,
       Map<String, String> params, String consumerSecret, String tokenSecret) {
     final encodedParams = params.keys
         .map((key) =>
@@ -210,7 +204,7 @@ class TrelloAuthService {
   }
 
   /// Helper: Build OAuth Authorization Header
-  String buildAuthHeader(Map<String, String> params, String signature) {
+  String _buildAuthHeader(Map<String, String> params, String signature) {
     final authParams = {...params, 'oauth_signature': signature};
     return 'OAuth ${authParams.entries
             .map((e) => '${Uri.encodeComponent(e.key)}="${Uri.encodeComponent(e.value)}"')

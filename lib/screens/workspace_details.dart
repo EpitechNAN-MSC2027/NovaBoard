@@ -6,9 +6,8 @@ import 'listes.dart';
 
 class WorkspaceDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> workspace;
-  final TrelloService? trelloService;
 
-  const WorkspaceDetailsScreen({Key? key, required this.workspace, this.trelloService}) : super(key: key);
+  const WorkspaceDetailsScreen({Key? key, required this.workspace}) : super(key: key);
 
   @override
   WorkspaceDetailsScreenState createState() => WorkspaceDetailsScreenState();
@@ -37,11 +36,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
 
   Future<void> _initTrelloService() async {
     try {
-      if (widget.trelloService != null) {
-        _trelloService = widget.trelloService!;
-        await _loadTableaux();
-        return;
-      }
       final trelloAuthService = TrelloAuthService();
       final token = await trelloAuthService.getStoredAccessToken() ?? '';
 
