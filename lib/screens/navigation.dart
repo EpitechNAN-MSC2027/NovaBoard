@@ -9,6 +9,7 @@ GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState
 
 class NavigationScreen extends StatefulWidget {
   final TrelloService? trelloService;
+
   NavigationScreen({Key? key, this.trelloService}) : super(key: navigationKey);
 
   @override
@@ -16,12 +17,15 @@ class NavigationScreen extends StatefulWidget {
 }
 
 class NavigationScreenState extends State<NavigationScreen> {
+
   TrelloService? _trelloService;
   bool _hasUnreadNotifications = false;
 
-  int _selectedIndex = 0;
+  int selectedIndex = 0;
 
   final List<Function> _pages = [];
+
+  static var bottomWidgetKey = GlobalKey<State<BottomNavigationBar>>();
 
   @override
   void initState() {
@@ -67,7 +71,7 @@ class NavigationScreenState extends State<NavigationScreen> {
 
   void setSelectedIndex(int index) {
     setState(() {
-      _selectedIndex = index;
+      selectedIndex = index;
       if (index == 2) {
         _hasUnreadNotifications = false;
       }
@@ -76,7 +80,7 @@ class NavigationScreenState extends State<NavigationScreen> {
 
   void setSelectedWorkspace(Map<String, dynamic> workspace) {
     setState(() {
-      _selectedIndex = 0;
+      selectedIndex = 0;
     });
   }
 
@@ -107,9 +111,10 @@ class NavigationScreenState extends State<NavigationScreen> {
               ),
             ),
           ),
-          body: _pages[_selectedIndex](),
+          body: _pages[selectedIndex](),
           bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
+            key: bottomWidgetKey,
+            currentIndex: selectedIndex,
             onTap: (index) {
               if (index == 3) {
                 showDialog(

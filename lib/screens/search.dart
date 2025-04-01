@@ -284,24 +284,27 @@ class _SearchScreen extends State<SearchScreen> {
                   'displayName': workspaceDetails['displayName'] ?? 'Workspace',
                 };
 
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
-                  ),
-                  (Route<dynamic> route) => false,
-                );
-                Future.delayed(Duration(milliseconds: 100), () {
+                (NavigationScreenState.bottomWidgetKey.currentWidget as BottomNavigationBar).onTap!(0);
+                if (context.mounted) {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => ListesScreen(tableau: board, workspace: workspace),
+                      builder: (context) =>
+                          WorkspaceDetailsScreen(workspace: workspace),
                     ),
                   );
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => DetailCarteScreen(carte: updatedCarte),
+                      builder: (context) =>
+                          ListesScreen(tableau: board, workspace: workspace),
                     ),
                   );
-                });
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          DetailCarteScreen(carte: updatedCarte),
+                    ),
+                  );
+                }
               } catch (e) {
                 print('Erreur lors de la navigation vers les détails de la carte : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
