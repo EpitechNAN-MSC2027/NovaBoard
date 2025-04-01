@@ -38,7 +38,7 @@ class DetailCarteScreenState extends State<DetailCarteScreen> {
           title: Text(widget.carte['name']),
           backgroundColor: Colors.deepPurple,
         ),
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 

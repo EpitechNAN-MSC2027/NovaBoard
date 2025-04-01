@@ -3,9 +3,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
 import 'detail_carte.dart';
-import 'navigation.dart';
 import 'workspace_details.dart';
 import 'listes.dart';
+import 'workspaces.dart';
+import 'navigation.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -283,17 +284,13 @@ class _SearchScreen extends State<SearchScreen> {
                   'displayName': workspaceDetails['displayName'] ?? 'Workspace',
                 };
 
-                Navigator.of(context).push(
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => NavigationScreen(selectedIndex: 0),
+                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
                   ),
+                  (Route<dynamic> route) => false,
                 );
                 Future.delayed(Duration(milliseconds: 100), () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
-                    ),
-                  );
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => ListesScreen(tableau: board, workspace: workspace),
