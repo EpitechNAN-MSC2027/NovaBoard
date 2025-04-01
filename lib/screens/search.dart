@@ -237,7 +237,7 @@ class _SearchScreen extends State<SearchScreen> {
         } else if (result.containsKey('idOrganization')) {
           // This is likely a board
           title = result['name'];
-          subtitle = 'Board';
+          subtitle = result['listName'] ?? 'Liste inconnue';
           icon = Icons.dashboard;
         } else if (result.containsKey('username')) {
           // This is likely a member
@@ -259,23 +259,87 @@ class _SearchScreen extends State<SearchScreen> {
           leading: Icon(icon),
           title: Text(title),
           subtitle: Text(subtitle),
-          onTap: () {
-            if (result.containsKey('idBoard') && result.containsKey('idList')) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => DetailCarteScreen(carte: result),
-                ),
-              );
+          onTap: () async {
+            if (_trelloService == null) return;
+
+            if (result.containsKey('idBoard') && result.containsKey('idList') && result['idBoard'] != null && result['idList'] != null) {
+              print('idList: ${result['idList']}');
+              if (result['idBoard'] == null || result['idList'] == null) {
+                print('Erreur : idBoard ou idList est null');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Informations de carte incomplètes.')),
+                );
+                return;
+              }
+              try {
+                final boardDetails = await _trelloService!.getBoardDetails(result['idBoard']);
+                final listDetails = await _trelloService!.getListDetails(result['idList']);
+                boardDetails['listName'] = listDetails['name']; // Mise à jour du nom du tableau
+
+                final board = {
+                  'id': boardDetails['id'],
+                  'name': boardDetails['name'] ?? boardDetails['listName'] ?? 'Board',
+                  'idOrganization': boardDetails['idOrganization'],
+                };
+
+                final updatedCarte = Map<String, dynamic>.from(result);
+                updatedCarte['listName'] = result['listName'];
+
+                final workspaceDetails = await _trelloService!.getWorkspaceDetails(boardDetails['idOrganization']);
+
+                final workspace = {
+                  'id': workspaceDetails['id'],
+                  'displayName': workspaceDetails['displayName'] ?? 'Workspace',
+                };
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
+                  ),
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ListesScreen(tableau: board, workspace: workspace),
+                  ),
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => DetailCarteScreen(carte: updatedCarte),
+                  ),
+                );
+              } catch (e) {
+                print('Erreur lors de la navigation vers les détails de la carte : $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Impossible de charger les détails.')),
+                );
+              }
               return;
             }
-            if (result.containsKey('idOrganization')) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => ListesScreen(tableau: result, workspace: {}),
-                ),
-              );
+
+            if (result.containsKey('id') && result.containsKey('idOrganization')) {
+              try {
+                final workspace = await _trelloService!.getWorkspaceDetails(result['idOrganization']);
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ListesScreen(
+                      tableau: result,
+                      workspace: {
+                        'id': workspace['id'],
+                        'displayName': workspace['displayName'],
+                      },
+                    ),
+                  ),
+                );
+              } catch (e) {
+                print('Erreur : $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Impossible de charger le tableau')),
+                );
+              }
               return;
             }
+
             if (result.containsKey('displayName') && result.containsKey('id')) {
               Navigator.of(context).push(
                 MaterialPageRoute(

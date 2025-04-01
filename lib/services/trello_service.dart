@@ -643,4 +643,40 @@ class TrelloService {
       throw Exception('Failed to search Trello: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> getListDetails(String listId) async {
+    final url = _buildUrl('lists/$listId');
+    final response = await _client.get(url);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load list details');
+    }
+  }
+
+  Future<Map<String, dynamic>> getBoardDetails(String boardId) async {
+    final url = _buildUrl('boards/$boardId', {
+      'fields': 'name,idOrganization',
+    });
+
+    print('Fetching board from: $url'); // For debugging
+
+    final response = await _client.get(url);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load board details');
+    }
+  }
+
+  Future<Map<String, dynamic>> getWorkspaceDetails(String workspaceId) async {
+    final url = Uri.parse('https://api.trello.com/1/organizations/$workspaceId?key=$apiKey&token=$token');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load workspace details');
+    }
+  }
 }
