@@ -285,7 +285,7 @@ class _SearchScreen extends State<SearchScreen> {
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => NavigationScreen(_selectedIndex: 0),
+                    builder: (context) => NavigationScreen(selectedIndex: 0),
                   ),
                 );
                 Future.delayed(Duration(milliseconds: 100), () {
