@@ -5,7 +5,8 @@ import '../services/trello_service.dart';
 import 'detail_carte.dart';
 import 'workspace_details.dart';
 import 'listes.dart';
-
+import 'workspaces.dart';
+import 'navigation.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -79,11 +80,9 @@ class _SearchScreen extends State<SearchScreen> {
     });
 
     try {
-      // Cast the result to Map to access its properties
       final Map<String, dynamic> results = await _trelloService!.searchTrello(searchTerm: query);
 
       setState(() {
-        // Combine cards, boards, and other result types
         _searchResults = [
           ...(results['cards'] ?? []),
           ...(results['boards'] ?? []),
@@ -222,25 +221,19 @@ class _SearchScreen extends State<SearchScreen> {
         final result = _searchResults[index];
         print('RESULT: $result');
 
-        // Determine the type of result and display accordingly
         String title = 'Unknown';
         String subtitle = 'No description';
         IconData icon = Icons.article;
 
-
-        // Determine the type based on available fields
         if (result.containsKey('shortUrl') && result.containsKey('idBoard')) {
-          // This is likely a card
           title = result['name'];
           subtitle = 'Card';
           icon = Icons.description;
         } else if (result.containsKey('idOrganization')) {
-          // This is likely a board
           title = result['name'];
           subtitle = result['listName'] ?? 'Liste inconnue';
           icon = Icons.dashboard;
         } else if (result.containsKey('username')) {
-          // This is likely a member
           title = result['fullName'] ?? 'Unnamed';
           subtitle = 'Member';
           icon = Icons.person;
@@ -250,7 +243,6 @@ class _SearchScreen extends State<SearchScreen> {
           icon = Icons.workspaces;
         }
 
-        // Include description if available
         if (result.containsKey('desc') && result['desc'] != null && result['desc'].isNotEmpty) {
           subtitle += ' - ${result['desc']}';
         }
@@ -274,7 +266,7 @@ class _SearchScreen extends State<SearchScreen> {
               try {
                 final boardDetails = await _trelloService!.getBoardDetails(result['idBoard']);
                 final listDetails = await _trelloService!.getListDetails(result['idList']);
-                boardDetails['listName'] = listDetails['name']; // Mise à jour du nom du tableau
+                boardDetails['listName'] = listDetails['name'];
 
                 final board = {
                   'id': boardDetails['id'],
@@ -292,21 +284,24 @@ class _SearchScreen extends State<SearchScreen> {
                   'displayName': workspaceDetails['displayName'] ?? 'Workspace',
                 };
 
-                Navigator.of(context).push(
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
                   ),
+                  (Route<dynamic> route) => false,
                 );
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ListesScreen(tableau: board, workspace: workspace),
-                  ),
-                );
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => DetailCarteScreen(carte: updatedCarte),
-                  ),
-                );
+                Future.delayed(Duration(milliseconds: 100), () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ListesScreen(tableau: board, workspace: workspace),
+                    ),
+                  );
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => DetailCarteScreen(carte: updatedCarte),
+                    ),
+                  );
+                });
               } catch (e) {
                 print('Erreur lors de la navigation vers les détails de la carte : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
