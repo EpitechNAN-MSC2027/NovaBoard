@@ -5,13 +5,15 @@ import '../services/trello_service.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  final TrelloService? trelloService;
+
+  const NotificationsScreen({Key? key, this.trelloService}) : super(key: key);
 
   @override
-  _NotificationsScreenState createState() => _NotificationsScreenState();
+  NotificationsScreenState createState() => NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class NotificationsScreenState extends State<NotificationsScreen> {
   TrelloService? _trelloService;
   List<dynamic> _notifications = [];
   bool _isLoading = true;
@@ -24,6 +26,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _initTrelloService() async {
+    if (widget.trelloService != null) {
+      _trelloService = widget.trelloService;
+      await _loadNotifications();
+      return;
+    }
+
     try {
       final trelloAuthService = TrelloAuthService();
       final token = await trelloAuthService.getStoredAccessToken() ?? '';
