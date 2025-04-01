@@ -454,38 +454,47 @@ class ListesScreenState extends State<ListesScreen> {
                   const SizedBox(height: 10),
                   if (membres.isEmpty)
                     const Text("Aucun membre assigné"),
-                  ...membres.map((membreId) => ListTile(
-                    title: Text(membreId),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.remove_circle, color: Colors.red),
-                      onPressed: () async {
-                        try {
-                          await _trelloService!.removeMemberFromCard(carte['id'], membreId);
-                          setStateModal(() {
-                            membres.remove(membreId);
-                          });
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Erreur lors de la suppression : $e")),
-                          );
-                        }
-                      },
-                    ),
+                  ...membres.map((membreId) => FutureBuilder(
+                    future: _trelloService!.getMemberDetails(membreId),
+                    builder: (context, snapshot) {
+                      final name = snapshot.connectionState == ConnectionState.done && snapshot.hasData
+                        ? snapshot.data != null ? snapshot.data!['fullName']
+                        : membreId:"";
+                      return ListTile(
+                        title: Text(name),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.remove_circle, color: Colors.red),
+                          onPressed: () async {
+                            try {
+                              await _trelloService!.removeMemberFromCard(carte['id'], membreId);
+                              setStateModal(() {
+                                membres.remove(membreId);
+                              });
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Erreur lors de la suppression : $e")),
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    },
                   )),
                   const Divider(),
                   const Text("➕ Ajouter un membre"),
                   TextField(
                     controller: emailController,
-                    decoration: const InputDecoration(labelText: "ID du membre"),
+                    decoration: const InputDecoration(labelText: "Email du membre"),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () async {
                       if (emailController.text.isNotEmpty) {
                         try {
-                          await _trelloService!.addMemberToCard(carte['id'], emailController.text);
+                          final memberId = await _trelloService!.getMemberIdByEmail(emailController.text);
+                          await _trelloService!.addMemberToCard(carte['id'], memberId!);
                           setStateModal(() {
-                            membres.add(emailController.text);
+                            membres.add(memberId);
                           });
                           emailController.clear();
                         } catch (e) {

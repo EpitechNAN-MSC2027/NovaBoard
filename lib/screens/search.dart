@@ -5,7 +5,6 @@ import '../services/trello_service.dart';
 import 'detail_carte.dart';
 import 'workspace_details.dart';
 import 'listes.dart';
-import 'workspaces.dart';
 import 'navigation.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -314,34 +313,95 @@ class _SearchScreen extends State<SearchScreen> {
               return;
             }
 
+            if (result.containsKey('idList') && !result.containsKey('idBoard')) {
+              try {
+                final listDetails = await _trelloService!.getListDetails(result['idList']);
+                final boardId = listDetails['idBoard'];
+
+                final boardDetails = await _trelloService!.getBoardDetails(boardId);
+                final workspaceDetails = await _trelloService!.getWorkspaceDetails(boardDetails['idOrganization']);
+
+                final board = {
+                  'id': boardDetails['id'],
+                  'name': boardDetails['name'] ?? 'Board',
+                  'idOrganization': boardDetails['idOrganization'],
+                };
+
+                final workspace = {
+                  'id': workspaceDetails['id'],
+                  'displayName': workspaceDetails['displayName'] ?? 'Workspace',
+                };
+
+                (NavigationScreenState.bottomWidgetKey.currentWidget as BottomNavigationBar).onTap!(0);
+                if (context.mounted) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
+                    ),
+                  );
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ListesScreen(tableau: board, workspace: workspace),
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('Erreur lors de la navigation depuis une liste : $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Impossible de charger les détails de la liste.')),
+                );
+              }
+              return;
+            }
+
             if (result.containsKey('id') && result.containsKey('idOrganization')) {
               try {
                 final workspace = await _trelloService!.getWorkspaceDetails(result['idOrganization']);
 
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ListesScreen(
-                      tableau: result,
-                      workspace: {
-                        'id': workspace['id'],
-                        'displayName': workspace['displayName'],
-                      },
+                (NavigationScreenState.bottomWidgetKey.currentWidget as BottomNavigationBar).onTap!(0);
+                if (context.mounted) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => WorkspaceDetailsScreen(
+                        workspace: {
+                          'id': workspace['id'],
+                          'displayName': workspace['displayName'],
+                        },
+                      ),
                     ),
-                  ),
-                );
+                  );
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ListesScreen(
+                        tableau: result,
+                        workspace: {
+                          'id': workspace['id'],
+                          'displayName': workspace['displayName'],
+                        },
+                      ),
+                    ),
+                  );
+                }
               } catch (e) {
                 print('Erreur : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Impossible de charger le tableau')),
+                  const SnackBar(content: Text('Impossible de charger les listes')),
                 );
               }
               return;
             }
 
             if (result.containsKey('displayName') && result.containsKey('id')) {
+              (NavigationScreenState.bottomWidgetKey.currentWidget as BottomNavigationBar).onTap!(0);
+
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => WorkspaceDetailsScreen(workspace: result),
+                  builder: (context) => WorkspaceDetailsScreen(
+                    workspace: {
+                      'id': result['id'],
+                      'displayName': result['displayName'],
+                    },
+                  ),
                 ),
               );
               return;

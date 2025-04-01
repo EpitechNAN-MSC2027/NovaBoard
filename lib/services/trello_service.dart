@@ -656,7 +656,7 @@ class TrelloService {
 
   Future<Map<String, dynamic>> getBoardDetails(String boardId) async {
     final url = _buildUrl('boards/$boardId', {
-      'fields': 'name,idOrganization',
+      'fields': 'name,idOrganization,desc',
     });
 
     print('Fetching board from: $url'); // For debugging
@@ -679,4 +679,39 @@ class TrelloService {
       throw Exception('Failed to load workspace details');
     }
   }
+
+  Future<String?> getMemberIdByEmail(String email) async {
+    final url = _buildUrl('search', {
+      'query': email,
+      'modelTypes': 'members',
+      'partial': 'true',
+    });
+
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final members = data['members'] as List<dynamic>;
+      if (members.isNotEmpty) {
+        return members.first['id'];
+      } else {
+        return null;
+      }
+    } else {
+      throw Exception('Failed to search for member with email $email');
+    }
+  }
+
+  Future<Map<String, dynamic>> getMemberDetails(String memberId) async {
+    final url = _buildUrl('members/$memberId');
+
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load member details for $memberId');
+    }
+  }
+
 }
