@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import '../services/trello_auth.dart';
+import '../services/trello_service.dart';
 import 'workspaces.dart';
-import 'search_screen.dart';
+import 'search.dart';
 import 'notifications.dart';
 
 GlobalKey<NavigationScreenState> navigationKey = GlobalKey<NavigationScreenState>();
 
 class NavigationScreen extends StatefulWidget {
-  NavigationScreen({Key? key}) : super(key: navigationKey);
+  final TrelloService? trelloService;
+  NavigationScreen({Key? key, this.trelloService}) : super(key: navigationKey);
 
   @override
   NavigationScreenState createState() => NavigationScreenState();
 }
 
 class NavigationScreenState extends State<NavigationScreen> {
-  final TrelloAuthService _authService = TrelloAuthService();
+  TrelloService? _trelloService;
+  bool _hasUnreadNotifications = false;
 
   int _selectedIndex = 0;
 
@@ -23,12 +26,28 @@ class NavigationScreenState extends State<NavigationScreen> {
   @override
   void initState() {
     super.initState();
+    _initTrelloService().then((_) => _checkUnreadNotifications());
     _pages.addAll([
           () => const WorkspacesScreen(),
           () => const SearchScreen(),
           () => const NotificationsScreen(),
           () => const SizedBox.shrink(),
     ]);
+  }
+
+  Future<void> _initTrelloService() async {
+    if (widget.trelloService != null) {
+      _trelloService = widget.trelloService!;
+      return;
+    }
+    final authService = TrelloAuthService();
+    final token = await authService.getStoredAccessToken() ?? '';
+    if (token.isNotEmpty) {
+      _trelloService = TrelloService(
+        apiKey: const String.fromEnvironment('TRELLO_API_KEY'),
+        token: token,
+      );
+    }
   }
 
   Future<void> logout() async {
@@ -38,9 +57,20 @@ class NavigationScreenState extends State<NavigationScreen> {
     });
   }
 
+  Future<void> _checkUnreadNotifications() async {
+    if (_trelloService == null) return;
+    final unread = await _trelloService!.hasUnreadNotifications();
+    setState(() {
+      _hasUnreadNotifications = unread;
+    });
+  }
+
   void setSelectedIndex(int index) {
     setState(() {
       _selectedIndex = index;
+      if (index == 2) {
+        _hasUnreadNotifications = false;
+      }
     });
   }
 
@@ -101,8 +131,7 @@ class NavigationScreenState extends State<NavigationScreen> {
                             await logout();
                           },
                           child: const Text('Déconnexion'),
-    ),
-                      ],
+    )],
                     );
                   },
                 );
@@ -114,20 +143,33 @@ class NavigationScreenState extends State<NavigationScreen> {
             selectedItemColor: Colors.deepPurple,
             unselectedItemColor: Colors.black54,
             backgroundColor: Colors.white,
-            items: const [
-              BottomNavigationBarItem(
+            items: [
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.business),
                 label: 'Workspaces',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.search),
                 label: 'Recherche',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.notifications),
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (_hasUnreadNotifications)
+                      const Positioned(
+                        right: 0,
+                        top: 0,
+                        child: CircleAvatar(
+                          radius: 4,
+                          backgroundColor: Colors.red,
+                        ),
+                      ),
+                  ],
+                ),
                 label: 'Notifications',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.logout),
                 label: 'Déconnexion',
               ),

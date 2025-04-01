@@ -5,7 +5,10 @@ import '../services/trello_service.dart';
 import 'workspace_details.dart';
 
 class WorkspacesScreen extends StatefulWidget {
-  const WorkspacesScreen({Key? key}) : super(key: key);
+  final TrelloService? trelloService;
+  final VoidCallback? onNavigate;
+
+  const WorkspacesScreen({Key? key, this.trelloService, this.onNavigate}) : super(key: key);
 
 
   @override
@@ -32,6 +35,12 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
 
   Future<void> _initTrelloService() async {
     try {
+      if (widget.trelloService != null) {
+        _trelloService = widget.trelloService!;
+        await _loadWorkspaces();
+        return;
+      }
+
       final trelloAuthService = TrelloAuthService();
       final token = await trelloAuthService.getStoredAccessToken() ?? '';
 
@@ -42,12 +51,11 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
         });
         return;
       }
+
       _trelloService = TrelloService(
         apiKey: dotenv.env['TRELLO_API_KEY'] ?? '',
         token: token,
       );
-      print('TrelloService is initialized with API Key & Token');
-
       await _loadWorkspaces();
     } catch (e) {
       setState(() {
@@ -179,7 +187,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
         ? _workspaceDescriptionController.text
             : null,
         );
-
                   setState(() {
                     _workspaces[index] = updatedWorkspace;
                   });
@@ -402,12 +409,16 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                                 ],
                               ),
                               onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
-                                  ),
-                                );
+                                if (widget.onNavigate != null) {
+                                  widget.onNavigate!();
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
+                                    ),
+                                  );
+                                }
                               },
                             )
                           ),

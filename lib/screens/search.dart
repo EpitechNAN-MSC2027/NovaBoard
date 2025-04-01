@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/trello_auth.dart';
 import '../services/trello_service.dart';
+import 'detail_carte.dart';
 import 'workspace_details.dart';
 import 'listes.dart';
 
@@ -15,7 +16,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreen extends State<SearchScreen> {
   TrelloService? _trelloService;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
   String _errorMessage = '';
@@ -63,6 +64,15 @@ class _SearchScreen extends State<SearchScreen> {
       return;
     }
 
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _errorMessage = '';
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -93,8 +103,10 @@ class _SearchScreen extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Trello Search'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -172,10 +184,8 @@ class _SearchScreen extends State<SearchScreen> {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              onSubmitted: (value) {
-                if (value.isNotEmpty) {
-                  _performSearch(value);
-                }
+              onChanged: (value) {
+                _performSearch(value);
               },
             ),
           ),
@@ -183,7 +193,7 @@ class _SearchScreen extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage.isNotEmpty
-                ? Center(child: Text(_errorMessage, style: TextStyle(color: Colors.red)))
+                ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)))
                 : _searchResults.isEmpty
                 ? const Center(child: Text('No results found'))
                 : _buildSearchResults(),
@@ -227,7 +237,7 @@ class _SearchScreen extends State<SearchScreen> {
         } else if (result.containsKey('idOrganization')) {
           // This is likely a board
           title = result['name'];
-          subtitle = 'Board';
+          subtitle = result['listName'] ?? 'Liste inconnue';
           icon = Icons.dashboard;
         } else if (result.containsKey('username')) {
           // This is likely a member
@@ -249,37 +259,94 @@ class _SearchScreen extends State<SearchScreen> {
           leading: Icon(icon),
           title: Text(title),
           subtitle: Text(subtitle),
-          onTap: () {
-            if (result.containsKey('idBoard')) {
-              // This is likely a board
-              /*Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ListesScreen(
-                    workspace: workspace,
-                    tableau: result,
+          onTap: () async {
+            if (_trelloService == null) return;
+
+            if (result.containsKey('idBoard') && result.containsKey('idList') && result['idBoard'] != null && result['idList'] != null) {
+              print('idList: ${result['idList']}');
+              if (result['idBoard'] == null || result['idList'] == null) {
+                print('Erreur : idBoard ou idList est null');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Informations de carte incomplètes.')),
+                );
+                return;
+              }
+              try {
+                final boardDetails = await _trelloService!.getBoardDetails(result['idBoard']);
+                final listDetails = await _trelloService!.getListDetails(result['idList']);
+                boardDetails['listName'] = listDetails['name']; // Mise à jour du nom du tableau
+
+                final board = {
+                  'id': boardDetails['id'],
+                  'name': boardDetails['name'] ?? boardDetails['listName'] ?? 'Board',
+                  'idOrganization': boardDetails['idOrganization'],
+                };
+
+                final updatedCarte = Map<String, dynamic>.from(result);
+                updatedCarte['listName'] = result['listName'];
+
+                final workspaceDetails = await _trelloService!.getWorkspaceDetails(boardDetails['idOrganization']);
+
+                final workspace = {
+                  'id': workspaceDetails['id'],
+                  'displayName': workspaceDetails['displayName'] ?? 'Workspace',
+                };
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => WorkspaceDetailsScreen(workspace: workspace),
                   ),
-                ),
-              );*/
-            } else if (result.containsKey('idList')) {
-              // This is likely a card
-              /*Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CardDetailsScreen(card: result),
-                ),
-              );*/
-            } else if (result.containsKey('id')) {
-              // This is likely a workspace
-              /*Navigator.push(
-                context,
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ListesScreen(tableau: board, workspace: workspace),
+                  ),
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => DetailCarteScreen(carte: updatedCarte),
+                  ),
+                );
+              } catch (e) {
+                print('Erreur lors de la navigation vers les détails de la carte : $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Impossible de charger les détails.')),
+                );
+              }
+              return;
+            }
+
+            if (result.containsKey('id') && result.containsKey('idOrganization')) {
+              try {
+                final workspace = await _trelloService!.getWorkspaceDetails(result['idOrganization']);
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ListesScreen(
+                      tableau: result,
+                      workspace: {
+                        'id': workspace['id'],
+                        'displayName': workspace['displayName'],
+                      },
+                    ),
+                  ),
+                );
+              } catch (e) {
+                print('Erreur : $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Impossible de charger le tableau')),
+                );
+              }
+              return;
+            }
+
+            if (result.containsKey('displayName') && result.containsKey('id')) {
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => WorkspaceDetailsScreen(workspace: result),
                 ),
-              ).then((_) {
-                // When navigating back, set the selected index to the WorkspacesScreen
-                navigationKey.currentState?.setSelectedIndex(0);
-              });*/
+              );
+              return;
             }
           },
         );
