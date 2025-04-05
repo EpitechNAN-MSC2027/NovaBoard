@@ -218,7 +218,6 @@ class _SearchScreen extends State<SearchScreen> {
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final result = _searchResults[index];
-        print('RESULT: $result');
 
         String title = 'Unknown';
         String subtitle = 'No description';
@@ -254,9 +253,7 @@ class _SearchScreen extends State<SearchScreen> {
             if (_trelloService == null) return;
 
             if (result.containsKey('idBoard') && result.containsKey('idList') && result['idBoard'] != null && result['idList'] != null) {
-              print('idList: ${result['idList']}');
               if (result['idBoard'] == null || result['idList'] == null) {
-                print('Erreur : idBoard ou idList est null');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Informations de carte incomplètes.')),
                 );
@@ -305,7 +302,6 @@ class _SearchScreen extends State<SearchScreen> {
                   );
                 }
               } catch (e) {
-                print('Erreur lors de la navigation vers les détails de la carte : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Impossible de charger les détails.')),
                 );
@@ -346,7 +342,6 @@ class _SearchScreen extends State<SearchScreen> {
                   );
                 }
               } catch (e) {
-                print('Erreur lors de la navigation depuis une liste : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Impossible de charger les détails de la liste.')),
                 );
@@ -383,7 +378,6 @@ class _SearchScreen extends State<SearchScreen> {
                   );
                 }
               } catch (e) {
-                print('Erreur : $e');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Impossible de charger les listes')),
                 );

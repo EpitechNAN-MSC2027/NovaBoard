@@ -27,7 +27,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     bool biometricsAvailable = await _authService.isBiometricsAvailable();
     if (biometricsAvailable) {
       // Slight delay to ensure the screen is fully built
-      Future.delayed(Duration(milliseconds: 300), () async {
+      Future.delayed(const Duration(milliseconds: 300), () async {
         bool isAuthenticated = await _authService.authenticateWithBiometrics();
         if (isAuthenticated && mounted) {
           Navigator.pushReplacementNamed(context, '/navigation');

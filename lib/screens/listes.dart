@@ -70,7 +70,6 @@ class ListesScreenState extends State<ListesScreen> {
         apiKey: dotenv.env['TRELLO_API_KEY'] ?? '',
         token: token,
       );
-      print('TrelloService is initialized with API Key & Token');
 
       await _loadListes();
     } catch (e) {
@@ -89,7 +88,6 @@ class ListesScreenState extends State<ListesScreen> {
     });
 
     try {
-      print("Chargement des listes pour le tableau ${widget.tableau['id']}");
       final listes = await _trelloService!.getListsForBoard(widget.tableau['id']);
 
       for (var liste in listes) {
@@ -102,13 +100,11 @@ class ListesScreenState extends State<ListesScreen> {
         _isLoading = false;
       });
 
-      print("Listes et cartes récupérées avec succès !");
     } catch (e) {
       setState(() {
         _errorMessage = "Erreur lors du chargement des listes et cartes : $e";
         _isLoading = false;
       });
-      print(" Erreur lors du chargement des listes et cartes : $e");
     }
   }
 
@@ -215,9 +211,7 @@ class ListesScreenState extends State<ListesScreen> {
         _listes.removeAt(index);
       });
 
-      print(" Liste supprimée !");
     } catch (e) {
-      print(" Erreur suppression liste: $e");
     }
   }
 
@@ -527,8 +521,6 @@ class ListesScreenState extends State<ListesScreen> {
     if (position < leftEdge) {
       if (_autoScrollDirection != 'left') {
         _cancelAutoScroll();
-        print("PAGE:");
-        print(_pageController.page!);
         if (_pageController.page! > 0) {
           _startAutoScroll('left', screenWidth);
         }
@@ -548,7 +540,6 @@ class ListesScreenState extends State<ListesScreen> {
 
   // Start auto-scrolling in the specified direction
   void _startAutoScroll(String direction, double screenWidth) {
-    print("START AUTO SCROLL");
     _isAutoScrolling = true;
     _autoScrollDirection = direction;
 
@@ -578,7 +569,6 @@ class ListesScreenState extends State<ListesScreen> {
 
   // Cancel auto-scrolling
   void _cancelAutoScroll() {
-    print("CANCEL AUTO SCROLL");
     _autoScrollTimer?.cancel();
     _autoScrollTimer = null;
     _isAutoScrolling = false;
@@ -658,7 +648,6 @@ class ListesScreenState extends State<ListesScreen> {
     if (tableaux.isNotEmpty && tableaux[0] is String) {
       tableaux = tableaux.map((e) => {'nom': e, 'listes': []}).toList();
     }
-    print("tableaux après conversion : $tableaux");
 
     if (_selectedTableau != null && _selectedTableau!['listes'] != null) {
       _selectedTableau!['listes'] = (_selectedTableau!['listes'] as List)
@@ -835,7 +824,6 @@ class ListesScreenState extends State<ListesScreen> {
                                               ),
                                             ),
                                             onDragStarted: () {
-                                              print("DRAG STARTED");
                                               setState(() {
                                                 _draggedCard = carte;
                                                 _sourceList = liste;
@@ -843,11 +831,9 @@ class ListesScreenState extends State<ListesScreen> {
                                               });
                                             },
                                             onDragUpdate: (details) {
-                                              print("DRAG UPDATED");
                                               _handleDragUpdate(details, context);
                                             },
                                             onDragEnd: (details) {
-                                              print("DRAG STOPPED");
                                               _cancelAutoScroll();
                                               _lastDragPosition = null;
                                             },

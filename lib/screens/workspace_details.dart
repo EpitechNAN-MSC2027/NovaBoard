@@ -56,7 +56,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
         apiKey: dotenv.env['TRELLO_API_KEY'] ?? '',
         token: token,
       );
-      print('TrelloService is initialized with API Key & Token');
 
       await _loadTableaux();
     } catch (e) {
@@ -69,7 +68,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
 
   Future<void> _loadTableaux() async {
     if (_trelloService == null) {
-      print("TrelloService is not initialized!");
       setState(() {
         _errorMessage = 'TrelloService not initialized';
         _isLoading = false;
@@ -77,7 +75,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
       return;
     }
     try {
-      print("Chargement des tableaux pour workspace: ${widget.workspace['id']}");
       final tableaux = await _trelloService!.getBoardsForWorkspace(widget.workspace['id']);
 
       for (var tableau in tableaux) {
@@ -89,13 +86,11 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
         _isLoading = false;
       });
 
-      print("Tableaux chargés avec succès !");
     } catch (e) {
       setState(() {
         _errorMessage = 'Erreur lors du chargement des tableaux: $e';
         _isLoading = false;
       });
-      print("Erreur lors du chargement des tableaux: $e");
     }
   }
 
@@ -128,14 +123,12 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                   templates = loadedTemplates;
                   filteredTemplates = [...templates];
                   isLoadingTemplates = false;
-                  print("TEMPLATES LOADED: ${templates.length}");
                 });
               }
             }).catchError((e) {
               if (mounted && isLoadingTemplates) {
                 setStateModal(() {
                   isLoadingTemplates = false;
-                  print("ERROR LOADING TEMPLATES: $e");
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Failed to load templates: $e')),
@@ -677,8 +670,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     try {
-                      print("Mise à jour du tableau : ${_tableaux[index]['id']}");
-                      print("Nouvelle visibilité : $currentVisibility");
                       final updatedTableau = await _trelloService!.updateBoard(
                         boardId: _tableaux[index]['id'],
                         name: _tableauNameController.text,
@@ -687,12 +678,10 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
                             : null,
                       );
                       if (updatedTableau['prefs']['permissionLevel'] != currentVisibility) {
-                        print(" Mise à jour de la visibilité...");
                         await _trelloService!.updateBoardVisibility(
                           boardId: _tableaux[index]['id'],
                           visibility: currentVisibility,
                         );
-                        print("Visibilité mise à jour !");
                       }
                       await _loadTableaux();
                       if (context.mounted) Navigator.of(context).pop();
@@ -717,7 +706,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
   void _supprimerTableau(int index) async {
 
     if (_trelloService == null) {
-      print(" TrelloService is not initialized!");
       return;
     }
 
@@ -747,7 +735,6 @@ class WorkspaceDetailsScreenState extends State<WorkspaceDetailsScreen> {
 
     if (confirm) {
       try {
-        print("Suppression du tableau avec ID: $boardId");
         await _trelloService!.deleteBoard(boardId);
 
         await _loadTableaux();

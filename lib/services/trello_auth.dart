@@ -44,7 +44,6 @@ class TrelloAuthService {
 
       final accessToken = await _getAccessToken(oauthToken, oauthVerifier);
       await storage.write(key: 'trello_access_token', value: accessToken);
-      print('Access Token Stored: $accessToken');
 
       return;
     } catch (e) {
@@ -69,7 +68,6 @@ class TrelloAuthService {
       'oauth_callback': '$callbackUrlScheme://callback',
     };
 
-    print('params: $params');
 
     final signature = generateSignature('POST', url, params, apiSecret, '');
     final authHeader = buildAuthHeader(params, signature);
@@ -83,9 +81,6 @@ class TrelloAuthService {
       final responseParams = Uri.splitQueryString(response.body);
       final oauthToken = responseParams['oauth_token']!;
       final oauthTokenSecret = responseParams['oauth_token_secret']!;
-
-      print("Request Token: $oauthToken");
-      print("Request Token Secret: $oauthTokenSecret");
 
       // Store token secret for later use in _getAccessToken()
       await storage.write(key: 'oauth_token_secret', value: oauthTokenSecret);
@@ -131,11 +126,9 @@ class TrelloAuthService {
 
     if (response.statusCode == 200) {
       final responseParams = Uri.splitQueryString(response.body);
-      print("Access Token Response: ${response.body}");
 
       return responseParams['oauth_token']!;
     } else {
-      print("Error Response: ${response.statusCode} - ${response.body}");
       throw Exception('Failed to obtain access token');
     }
   }
@@ -200,7 +193,6 @@ class TrelloAuthService {
     final baseString =
         '$method&${Uri.encodeComponent(url)}&${Uri.encodeComponent(encodedParams.join('&'))}';
 
-    print("Signature Base String: $baseString");
 
     final signingKey = '${Uri.encodeComponent(consumerSecret)}&${Uri.encodeComponent(tokenSecret)}';
     final hmacSha1 = Hmac(sha1, utf8.encode(signingKey));
@@ -220,6 +212,5 @@ class TrelloAuthService {
   Future<void> logout() async {
     await storage.delete(key: 'trello_access_token');
     await storage.delete(key: 'oauth_token_secret');
-    print('User logged out and credentials cleared.');
   }
 }

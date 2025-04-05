@@ -71,13 +71,11 @@ class TrelloService {
 
       if (response.statusCode == 200) {
         final List<dynamic> members = jsonDecode(response.body);
-        print("Membres du workspace récupérés : $members");
         return members;
       } else {
         throw Exception("Erreur lors de la récupération des membres : ${response.body}");
       }
     } catch (e) {
-      print("Erreur réseau : $e");
       return [];
     }
   }
@@ -658,8 +656,6 @@ class TrelloService {
     final url = _buildUrl('boards/$boardId', {
       'fields': 'name,idOrganization,desc',
     });
-
-    print('Fetching board from: $url'); // For debugging
 
     final response = await _client.get(url);
     if (response.statusCode == 200) {

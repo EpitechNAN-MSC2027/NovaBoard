@@ -67,7 +67,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
 
   Future<void> _loadWorkspaces() async {
     if (_trelloService == null) {
-      print("TrelloService is not initialized !");
       return;
     }
     try {
@@ -79,7 +78,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
     } catch (e) {
       setState(() {
         _errorMessage = 'Error loading workspaces: $e';
-        print(_errorMessage);
         _isLoading = false;
       });
     }
@@ -257,9 +255,7 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
     List<dynamic> membres = [];
     try {
       membres = await _trelloService!.getMembersForWorkspace(workspace['id']);
-      print("Membres chargés : $membres");
     } catch (e) {
-      print("Erreur lors du chargement des membres : $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erreur lors du chargement des membres : $e")),
       );
@@ -279,7 +275,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
                   const Text("👥 Membres du Workspace", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   ...membres.map((membre) {
-                    print("👤 Affichage du membre : $membre");
                     return ListTile(
                       title: Text(membre['fullName'] ?? 'Utilisateur inconnu'),
                       trailing: IconButton(
@@ -325,7 +320,6 @@ class WorkspacesScreenState extends State<WorkspacesScreen> {
 
                           emailController.clear();
                         } catch (e) {
-                          print("Erreur lors de l'ajout du membre : $e");
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text("Erreur lors de l'ajout : $e")),
                           );

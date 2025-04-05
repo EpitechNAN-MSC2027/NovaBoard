@@ -69,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String? storedToken = await _authService.getStoredAccessToken();
       if (storedToken != null && mounted) {
-        print("Trello Authentication successful. Setting up PIN...");
 
         // Navigate to PIN setup screen for first-time users
         Navigator.pushReplacement(
@@ -77,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const PinSetupScreen()),
         );
       } else {
-        print("Authentication Failed.");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Authentication failed. Please try again.')),
@@ -85,7 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      print("Authentication Error: $e");
       if (mounted) {
         try {
           Navigator.of(context).pop(); // Close the loading dialog if open
