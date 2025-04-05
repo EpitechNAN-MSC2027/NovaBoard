@@ -748,6 +748,7 @@ class ListesScreenState extends State<ListesScreen> {
 
                                           return LongPressDraggable<Map<String, dynamic>>(
                                             data: carte,
+                                            delay: const Duration(milliseconds: 500),
                                             feedback: Material(
                                               elevation: 8.0, // Increased for more pronounced shadow
                                               borderRadius: BorderRadius.circular(8.0),
@@ -815,14 +816,16 @@ class ListesScreenState extends State<ListesScreen> {
                                               ),
                                             ),
                                             onDragStarted: () {
-                                              setState(() {
-                                                _isDragging = true;
-                                                _dragContext = DragContext(
-                                                    card: carte,
-                                                    sourceList: liste,
-                                                    cardIndex: cardIndex
-                                                );
-                                              });
+                                              if (carte != null) {
+                                                setState(() {
+                                                  _isDragging = true;
+                                                  _dragContext = DragContext(
+                                                      card: carte,
+                                                      sourceList: liste,
+                                                      cardIndex: cardIndex
+                                                  );
+                                                });
+                                              }
                                             },
                                             onDragUpdate: (details) {
                                               // Assurez-vous que cette méthode est bien appelée avec des logs
